@@ -7,6 +7,7 @@ class CachedFeedItem {
   final String userName;
   final String? userAvatar;
   final String activityType;
+  final String title;
   final double distance;
   final int duration;
   final String pace;
@@ -24,6 +25,7 @@ class CachedFeedItem {
     required this.userName,
     this.userAvatar,
     required this.activityType,
+    this.title = '',
     required this.distance,
     required this.duration,
     this.pace = '',
@@ -42,6 +44,7 @@ class CachedFeedItem {
         'userName': userName,
         'userAvatar': userAvatar,
         'activityType': activityType,
+        'title': title,
         'distance': distance,
         'duration': duration,
         'pace': pace,
@@ -60,6 +63,7 @@ class CachedFeedItem {
         userName: map['userName'] ?? '',
         userAvatar: map['userAvatar'],
         activityType: map['activityType'] ?? 'running',
+        title: map['title'] ?? '',
         distance: (map['distance'] ?? 0).toDouble(),
         duration: map['duration'] ?? 0,
         pace: map['pace'] ?? '',

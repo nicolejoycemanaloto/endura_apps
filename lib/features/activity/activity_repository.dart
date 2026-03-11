@@ -59,9 +59,5 @@ class ActivityRepository {
   }
 
   /// Get total activity count.
-  static int getCount() => _box.length;
+  static int getCount() => getAll().length;
 }
-
-
-
-

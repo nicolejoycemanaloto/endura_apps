@@ -10,74 +10,91 @@ import 'package:endura/features/feed/feed_repository.dart';
 import 'package:endura/features/activity/activity_detail_screen.dart';
 import 'package:endura/features/activity/activity_repository.dart';
 
-/// Home tab — social feed.
+/// Home tab — your activity feed.
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Feed'),
-      ),
-      child: SafeArea(
-        child: ValueListenableBuilder(
-          valueListenable: FeedRepository.listenable,
-          builder: (context, box, _) {
-            final items = FeedRepository.getAll();
+      child: ValueListenableBuilder(
+        valueListenable: FeedRepository.listenable,
+        builder: (context, box, _) {
+          final items = FeedRepository.getAll();
 
-            if (items.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(CupertinoIcons.news,
-                        size: 56, color: CupertinoColors.systemGrey3),
-                    const SizedBox(height: AppTheme.spacingMd),
-                    Text(
-                      'No activities yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: AppTheme.spacingSm),
-                    const Text(
-                      'Start a workout to see it here!',
-                      style: TextStyle(
-                          fontSize: 14, color: AppTheme.textSecondary),
-                    ),
-                  ],
-                ),
-              );
-            }
-
+          if (items.isEmpty) {
             return CustomScrollView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.all(AppTheme.spacingMd),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => Padding(
-                        padding:
-                            const EdgeInsets.only(bottom: AppTheme.spacingMd),
-                        child: _FeedCard(
-                          item: items[index],
-                          onTap: () => _openDetail(context, items[index]),
+                const CupertinoSliverNavigationBar(
+                  largeTitle: Text('Activities'),
+                  border: null,
+                ),
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(CupertinoIcons.sportscourt,
+                            size: 56, color: CupertinoColors.systemGrey3),
+                        const SizedBox(height: AppTheme.spacingMd),
+                        Text(
+                          'No activities yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textColor(context),
+                          ),
                         ),
-                      ),
-                      childCount: items.length,
+                        const SizedBox(height: AppTheme.spacingSm),
+                        const Text(
+                          'Start a workout to see it here!',
+                          style: TextStyle(
+                              fontSize: 14, color: AppTheme.textSecondary),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
             );
-          },
-        ),
+          }
+
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            slivers: [
+              const CupertinoSliverNavigationBar(
+                largeTitle: Text('Activities'),
+                border: null,
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.spacingMd,
+                  AppTheme.spacingMd,
+                  AppTheme.spacingMd,
+                  100,
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => Padding(
+                      padding:
+                          const EdgeInsets.only(bottom: AppTheme.spacingMd),
+                      child: _FeedCard(
+                        item: items[index],
+                        onTap: () => _openDetail(context, items[index]),
+                      ),
+                    ),
+                    childCount: items.length,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -135,11 +152,13 @@ class _FeedCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.userName,
+                          item.title.isNotEmpty
+                              ? item.title
+                              : '${typeEnum.icon} ${typeEnum.label}',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -176,13 +195,18 @@ class _FeedCard extends StatelessWidget {
                 children: [
                   _MiniStat(
                     label: 'Distance',
-                    value: Formatters.distanceKm(item.distance),
+                    value: (item.distance / 1000).toStringAsFixed(2),
+                    unit: 'km',
                   ),
                   _MiniStat(
                     label: 'Time',
-                    value: Formatters.duration(Duration(seconds: item.duration)),
+                    value: Formatters.durationTrack(Duration(seconds: item.duration)),
                   ),
-                  _MiniStat(label: 'Pace', value: item.pace),
+                  _MiniStat(
+                    label: 'Pace',
+                    value: item.pace.split(' ').first,
+                    unit: item.pace.contains(' ') ? item.pace.split(' ').last : '',
+                  ),
                 ],
               ),
             ),
@@ -197,22 +221,45 @@ class _FeedCard extends StatelessWidget {
 class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
+  final String? unit;
 
-  const _MiniStat({required this.label, required this.value});
+  const _MiniStat({required this.label, required this.value, this.unit});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textColor(context),
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textColor(context),
+                height: 1.0,
+              ),
+            ),
+            if (unit != null && unit!.isNotEmpty) ...[
+              const SizedBox(width: 2),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 1),
+                child: Text(
+                  unit!,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),

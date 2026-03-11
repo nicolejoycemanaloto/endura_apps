@@ -25,14 +25,39 @@ class Formatters {
     return '$minutes:$seconds';
   }
 
-  /// e.g. "5'42\"/km"
+  /// Strava-style short duration: "32:05" under 1h, "1h 0m" over 1h.
+  static String durationTrack(Duration d) {
+    final hours = d.inHours;
+    final minutes = d.inMinutes.remainder(60);
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (hours > 0) return '${hours}h ${minutes}m';
+    return '${minutes.toString().padLeft(2, '0')}:$seconds';
+  }
+
+  /// e.g. "5:42 /km"
   static String pace(Duration d, double meters) {
     if (meters <= 0) return '--:--';
     final totalSeconds = d.inSeconds;
     final paceSecondsPerKm = (totalSeconds / (meters / 1000)).round();
     final m = (paceSecondsPerKm ~/ 60).toString();
     final s = (paceSecondsPerKm % 60).toString().padLeft(2, '0');
-    return "$m'$s\"/km";
+    return '$m:$s /km';
+  }
+
+  /// Returns just the numeric part of pace e.g. "5:42"
+  static String paceValue(Duration d, double meters) {
+    if (meters <= 0) return '--:--';
+    final totalSeconds = d.inSeconds;
+    final paceSecondsPerKm = (totalSeconds / (meters / 1000)).round();
+    final m = (paceSecondsPerKm ~/ 60).toString();
+    final s = (paceSecondsPerKm % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  /// e.g. "12.4 km/h"
+  static String speedKmh(double metersPerSecond) {
+    final kmh = metersPerSecond * 3.6;
+    return '${kmh.toStringAsFixed(1)} km/h';
   }
 
   /// e.g. "12.4 km/h"

@@ -9,10 +9,17 @@ import 'package:endura/features/activity/activity_repository.dart';
 import 'package:endura/features/feed/feed_repository.dart';
 
 /// Full activity detail screen — Strava-inspired share card with route + stats.
-class ActivityDetailScreen extends StatelessWidget {
+class ActivityDetailScreen extends StatefulWidget {
   final CachedActivity activity;
 
   const ActivityDetailScreen({super.key, required this.activity});
+
+  @override
+  State<ActivityDetailScreen> createState() => _ActivityDetailScreenState();
+}
+
+class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
+  CachedActivity get activity => widget.activity;
 
   List<LatLng> get _routePoints =>
       activity.routePoints.map((p) => LatLng(p[0], p[1])).toList();
@@ -26,7 +33,9 @@ class ActivityDetailScreen extends StatelessWidget {
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(activity.type.label),
+        middle: Text(
+          activity.title.isNotEmpty ? activity.title : activity.type.label,
+        ),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () => _confirmDelete(context),
@@ -91,30 +100,32 @@ class ActivityDetailScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Spacer(flex: 3),
 
                             // Stats
                             _OverlayStat(
                               label: 'Distance',
-                              value: Formatters.distanceKm(activity.distance),
+                              value: (activity.distance / 1000).toStringAsFixed(2),
+                              unit: 'km',
                               fontSize: 42,
                             ),
                             const SizedBox(height: 16),
                             _OverlayStat(
-                              label: 'Pace',
-                              value: activity.avgPace.isNotEmpty
-                                  ? activity.avgPace
-                                  : Formatters.pace(
+                              label: activity.type == ActivityType.cycling ? 'Speed' : 'Pace',
+                              value: activity.type == ActivityType.cycling
+                                  ? activity.avgSpeed.toStringAsFixed(1)
+                                  : Formatters.paceValue(
                                       Duration(seconds: activity.duration),
                                       activity.distance),
+                              unit: activity.type == ActivityType.cycling ? 'km/h' : '/km',
                               fontSize: 36,
                             ),
                             const SizedBox(height: 16),
                             _OverlayStat(
                               label: 'Time',
-                              value: Formatters.duration(
+                              value: Formatters.durationTrack(
                                   Duration(seconds: activity.duration)),
                               fontSize: 36,
                             ),
@@ -165,7 +176,9 @@ class ActivityDetailScreen extends StatelessWidget {
 
               // ── Activity Info ────────────────────────────────────
               Text(
-                '${activity.type.icon} ${activity.type.label}',
+                activity.title.isNotEmpty
+                    ? activity.title
+                    : '${activity.type.icon} ${activity.type.label}',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -174,7 +187,7 @@ class ActivityDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                Formatters.dateTime(activity.startTime),
+                '${activity.type.icon} ${activity.type.label} · ${Formatters.dateTime(activity.startTime)}',
                 style: const TextStyle(
                     fontSize: 13, color: AppTheme.textSecondary),
               ),
@@ -200,41 +213,49 @@ class ActivityDetailScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                            child: _DetailStat(
-                                label: 'Distance',
-                                value: Formatters.distanceKm(
-                                    activity.distance))),
-                        Expanded(
-                            child: _DetailStat(
-                                label: 'Duration',
-                                value: Formatters.duration(Duration(
-                                    seconds: activity.duration)))),
-                        Expanded(
-                            child: _DetailStat(
+                        Expanded(child: _DetailStat(
+                            label: 'Distance',
+                            value: (activity.distance / 1000).toStringAsFixed(2),
+                            unit: 'km')),
+                        Expanded(child: _DetailStat(
+                            label: 'Time',
+                            value: Formatters.durationTrack(Duration(seconds: activity.duration)))),
+                        Expanded(child: activity.type == ActivityType.cycling
+                            ? _DetailStat(
+                                label: 'Avg Speed',
+                                value: activity.avgSpeed.toStringAsFixed(1),
+                                unit: 'km/h')
+                            : _DetailStat(
                                 label: 'Avg Pace',
-                                value: activity.avgPace)),
+                                value: Formatters.paceValue(
+                                    Duration(seconds: activity.duration),
+                                    activity.distance),
+                                unit: '/km')),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(
-                            child: _DetailStat(
-                                label: 'Speed',
-                                value:
-                                    '${activity.avgSpeed.toStringAsFixed(1)} km/h')),
-                        Expanded(
-                            child: _DetailStat(
-                                label: 'Calories',
-                                value: Formatters.calories(
-                                    activity.calories))),
+                        Expanded(child: activity.type == ActivityType.cycling
+                            ? _DetailStat(
+                                label: 'Avg Pace',
+                                value: Formatters.paceValue(
+                                    Duration(seconds: activity.duration),
+                                    activity.distance),
+                                unit: '/km')
+                            : _DetailStat(
+                                label: 'Avg Speed',
+                                value: activity.avgSpeed.toStringAsFixed(1),
+                                unit: 'km/h')),
+                        Expanded(child: _DetailStat(
+                            label: 'Calories',
+                            value: activity.calories.round().toString(),
+                            unit: 'cal')),
                         if (activity.elevationGain > 0)
-                          Expanded(
-                              child: _DetailStat(
-                                  label: 'Elevation',
-                                  value: Formatters.elevation(
-                                      activity.elevationGain))),
+                          Expanded(child: _DetailStat(
+                              label: 'Elevation',
+                              value: '+${activity.elevationGain.round()}',
+                              unit: 'm')),
                       ],
                     ),
                   ],
@@ -307,7 +328,7 @@ class ActivityDetailScreen extends StatelessWidget {
               // Delete from activities AND feed
               await ActivityRepository.delete(activity.localId);
               await FeedRepository.delete(activity.localId);
-              if (context.mounted) Navigator.of(context).pop();
+              if (mounted) Navigator.of(context).pop();
             },
           ),
         ],
@@ -321,11 +342,13 @@ class ActivityDetailScreen extends StatelessWidget {
 class _OverlayStat extends StatelessWidget {
   final String label;
   final String value;
+  final String? unit;
   final double fontSize;
 
   const _OverlayStat({
     required this.label,
     required this.value,
+    this.unit,
     this.fontSize = 36,
   });
 
@@ -333,6 +356,7 @@ class _OverlayStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -340,17 +364,41 @@ class _OverlayStat extends StatelessWidget {
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: CupertinoColors.white.withValues(alpha: 0.7),
-            letterSpacing: 1.2,
+            letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: FontWeight.w800,
-            color: CupertinoColors.white,
-            height: 1.1,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w900,
+                  color: CupertinoColors.white,
+                  height: 1.0,
+                  letterSpacing: -1,
+                ),
+              ),
+              if (unit != null) ...[
+                const SizedBox(width: 4),
+                Padding(
+                  padding: EdgeInsets.only(bottom: fontSize * 0.08),
+                  child: Text(
+                    unit!,
+                    style: TextStyle(
+                      fontSize: fontSize * 0.38,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -363,7 +411,8 @@ class _OverlayStat extends StatelessWidget {
 class _DetailStat extends StatelessWidget {
   final String label;
   final String value;
-  const _DetailStat({required this.label, required this.value});
+  final String? unit;
+  const _DetailStat({required this.label, required this.value, this.unit});
 
   @override
   Widget build(BuildContext context) {
@@ -376,17 +425,29 @@ class _DetailStat extends StatelessWidget {
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w500)),
         const SizedBox(height: 2),
-        Text(value,
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textColor(context))),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(value,
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textColor(context),
+                    height: 1.0)),
+            if (unit != null) ...[
+              const SizedBox(width: 2),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 1),
+                child: Text(unit!,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textSecondary)),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }
 }
-
-
-
-
-

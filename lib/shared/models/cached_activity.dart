@@ -93,6 +93,7 @@ class CachedActivity {
   final DateTime startTime;
   final DateTime endTime;
   final String caption;
+  final String title;
   final List<PhotoItem> photos;
   final String visibility;
   final DateTime createdAt;
@@ -115,6 +116,7 @@ class CachedActivity {
     required this.startTime,
     required this.endTime,
     this.caption = '',
+    this.title = '',
     this.photos = const [],
     this.visibility = 'public',
     DateTime? createdAt,
@@ -139,6 +141,7 @@ class CachedActivity {
         'startTime': startTime.toIso8601String(),
         'endTime': endTime.toIso8601String(),
         'caption': caption,
+        'title': title,
         'photos': photos.map((p) => p.toMap()).toList(),
         'visibility': visibility,
         'createdAt': createdAt.toIso8601String(),
@@ -166,6 +169,7 @@ class CachedActivity {
       startTime: DateTime.tryParse(map['startTime'] ?? '') ?? DateTime.now(),
       endTime: DateTime.tryParse(map['endTime'] ?? '') ?? DateTime.now(),
       caption: map['caption'] ?? '',
+      title: map['title'] ?? '',
       photos: (map['photos'] as List?)
               ?.map((p) => PhotoItem.fromMap(Map<String, dynamic>.from(p)))
               .toList() ??
@@ -180,6 +184,7 @@ class CachedActivity {
 
   CachedActivity copyWith({
     String? caption,
+    String? title,
     List<PhotoItem>? photos,
     SyncStatus? syncStatus,
     DateTime? lastModified,
@@ -199,6 +204,7 @@ class CachedActivity {
       startTime: startTime,
       endTime: endTime,
       caption: caption ?? this.caption,
+      title: title ?? this.title,
       photos: photos ?? this.photos,
       visibility: visibility,
       createdAt: createdAt,

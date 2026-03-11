@@ -163,7 +163,9 @@ class _ActivityCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    activity.type.label,
+                    activity.title.isNotEmpty
+                        ? activity.title
+                        : activity.type.label,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -183,16 +185,36 @@ class _ActivityCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  Formatters.distanceKm(activity.distance),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textColor(context),
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      (activity.distance / 1000).toStringAsFixed(2),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textColor(context),
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 1),
+                      child: Text(
+                        'km',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  Formatters.duration(Duration(seconds: activity.duration)),
+                  Formatters.durationTrack(Duration(seconds: activity.duration)),
                   style: const TextStyle(
                       fontSize: 12, color: AppTheme.textSecondary),
                 ),

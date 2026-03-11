@@ -11,25 +11,40 @@ class ChallengeRepository {
   /// Listenable that fires when the challenge box changes.
   static ValueListenable<Box<Map>> get listenable => _box.listenable();
 
+  static const _versionKey = '__challenge_seed_v';
+
   /// Get all challenges.
   static List<CachedChallenge> getAll() {
     final items = <CachedChallenge>[];
     for (final key in _box.keys) {
+      if (key == _versionKey) continue; // skip internal marker
       final data = _box.get(key);
       if (data != null) {
-        items.add(CachedChallenge.fromMap(Map<String, dynamic>.from(data)));
+        try {
+          items.add(CachedChallenge.fromMap(Map<String, dynamic>.from(data)));
+        } catch (_) {
+          // skip corrupt entries
+        }
       }
     }
     return items;
   }
 
-  /// Get only joined challenges.
+  /// Get only joined challenges (includes completed).
   static List<CachedChallenge> getJoined() =>
       getAll().where((c) => c.joined).toList();
 
-  /// Get available (not joined) challenges.
+  /// Get only active (joined but not completed and not expired) challenges.
+  static List<CachedChallenge> getActive() =>
+      getAll().where((c) => c.joined && !c.completed && !c.isExpired).toList();
+
+  /// Get only completed challenges.
+  static List<CachedChallenge> getCompleted() =>
+      getAll().where((c) => c.joined && c.completed).toList();
+
+  /// Get available (not joined, not expired) challenges.
   static List<CachedChallenge> getAvailable() =>
-      getAll().where((c) => !c.joined).toList();
+      getAll().where((c) => !c.joined && !c.isExpired).toList();
 
   /// Get a single challenge.
   static CachedChallenge? getById(String id) {
@@ -155,10 +170,8 @@ class ChallengeRepository {
 
   /// Seed default challenges. Replaces old set with modern challenges.
   static Future<void> seedDefaults() async {
-    // Check version marker to know if we need to reseed
-    final versionKey = '__challenge_seed_v';
-    const currentVersion = 2; // bump this to force reseed
-    final existingVersion = _box.get(versionKey);
+    const currentVersion = 3; // bump this to force reseed
+    final existingVersion = _box.get(_versionKey);
     if (existingVersion != null &&
         existingVersion['v'] == currentVersion) {
       return;
@@ -245,9 +258,11 @@ class ChallengeRepository {
     }
 
     // Store version marker
-    await _box.put(versionKey, {'v': currentVersion});
+    await _box.put(_versionKey, {'v': currentVersion});
   }
 }
+
+
 
 
 

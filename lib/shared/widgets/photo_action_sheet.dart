@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:endura/core/media/media_picker_service.dart';
+import 'package:endura/shared/widgets/camera_screen.dart';
 
 /// Result from the media action sheet.
 class MediaPickResult {
@@ -66,7 +68,19 @@ Future<MediaPickResult?> showMediaActionSheet(
 
   String? path;
   if (choice == 'camera') {
-    path = await MediaPickerService.pickFromCamera();
+    // Use the in-app camera (camera plugin) on mobile; fallback on desktop
+    if (!context.mounted) return null;
+    if (Platform.isAndroid || Platform.isIOS) {
+      path = await Navigator.of(context, rootNavigator: true).push<String>(
+        CupertinoPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const CameraScreen(),
+        ),
+      );
+    } else {
+      // Desktop fallback — use image_picker camera
+      path = await MediaPickerService.pickFromCamera();
+    }
   } else if (choice == 'gallery') {
     path = await MediaPickerService.pickFromGallery();
   }
@@ -128,7 +142,19 @@ Future<String?> showPhotoActionSheet(
     onRemove?.call();
     return null;
   }
-  if (choice == 'camera') return await MediaPickerService.pickFromCamera();
+  if (choice == 'camera') {
+    if (!context.mounted) return null;
+    if (Platform.isAndroid || Platform.isIOS) {
+      return await Navigator.of(context, rootNavigator: true).push<String>(
+        CupertinoPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const CameraScreen(),
+        ),
+      );
+    } else {
+      return await MediaPickerService.pickFromCamera();
+    }
+  }
   if (choice == 'gallery') return await MediaPickerService.pickFromGallery();
   return null;
 }

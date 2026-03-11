@@ -20,7 +20,7 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _password = TextEditingController();
 
   void _showError(String message) {
-    showThemedDialog(
+    showLightDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
         title: const Text('Oops'),
@@ -45,7 +45,7 @@ class _SignupPageState extends State<SignupPage> {
     box.put('password', _password.text.trim());
     box.put('biometrics', false);
 
-    showThemedDialog(
+    showLightDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => CupertinoAlertDialog(
@@ -72,349 +72,290 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmall = screenHeight < 700;
 
     return CupertinoPageScaffold(
+      resizeToAvoidBottomInset: false,
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          // ── Background gradient + subtle glow blobs ─────────────────────
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF0B0614),
-                    Color(0xFF2B0A4F),
-                    Color(0xFF6F2DA8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: -90,
-                    right: -60,
-                    child: _GlowBlob(
-                      color: const Color(0xFFB26CFF).withValues(alpha: 0.45),
-                      size: 220,
-                      blur: 28,
-                    ),
-                  ),
-                  Positioned(
-                    top: 90,
-                    left: -80,
-                    child: _GlowBlob(
-                      color: const Color(0xFFFF5ACD).withValues(alpha: 0.18),
-                      size: 240,
-                      blur: 30,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 140,
-                    right: -90,
-                    child: _GlowBlob(
-                      color: const Color(0xFF4D7CFE).withValues(alpha: 0.14),
-                      size: 260,
-                      blur: 34,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Hero top (glass + brand) ─────────────────────────────────────
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: size.height * 0.40,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(28),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                        child: Container(
-                          width: 132,
-                          height: 132,
-                          decoration: BoxDecoration(
-                            color: CupertinoColors.white.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(28),
-                            border: Border.all(
-                              color:
-                              CupertinoColors.white.withValues(alpha: 0.18),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF6F2DA8)
-                                    .withValues(alpha: 0.35),
-                                blurRadius: 26,
-                                offset: const Offset(0, 12),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(26),
-                          child: SvgPicture.asset(
-                            'assets/svg/signup.svg',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'Endura',
-                      style: TextStyle(
-                        color: CupertinoColors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.9,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Build endurance, achieve greatness ⚡',
-                      style: TextStyle(
-                        color: CupertinoColors.white.withValues(alpha: 0.78),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Bottom sheet card (glass-morphism) ��──────────────────────────
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            top: size.height * 0.40,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFF7F0FF).withValues(alpha: 0.92),
-                        const Color(0xFFEFE2FF).withValues(alpha: 0.88),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(34)),
-                    border: Border.all(
-                      color: CupertinoColors.white.withValues(alpha: 0.65),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: CupertinoColors.black.withValues(alpha: 0.18),
-                        blurRadius: 30,
-                        offset: const Offset(0, -8),
-                      ),
-                    ],
-                  ),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 54,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4A1A6B)
-                                .withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        const Text(
-                          'Create account',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF3C135D),
-                            letterSpacing: -0.6,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Sign up to start your Endura journey.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: const Color(0xFF4A1A6B)
-                                .withValues(alpha: 0.62),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 26),
-
-                        _AuthField(
-                          controller: _username,
-                          placeholder: 'Username',
-                          icon: CupertinoIcons.person_fill,
-                        ),
-                        const SizedBox(height: 14),
-
-                        _AuthField(
-                          controller: _password,
-                          placeholder: 'Password',
-                          icon: CupertinoIcons.lock_fill,
-                          obscureText: hidePassword,
-                          suffix: GestureDetector(
-                            onTap: () =>
-                                setState(() => hidePassword = !hidePassword),
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 16),
-                              child: Icon(
-                                hidePassword
-                                    ? CupertinoIcons.eye_fill
-                                    : CupertinoIcons.eye_slash_fill,
-                                color: CupertinoColors.systemGrey,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Tip: Use a strong password for better security.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: const Color(0xFF4A1A6B)
-                                  .withValues(alpha: 0.45),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        SizedBox(
-                          width: double.infinity,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF6F2DA8),
-                                  Color(0xFFB26CFF),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF6F2DA8)
-                                      .withValues(alpha: 0.35),
-                                  blurRadius: 22,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: CupertinoButton(
-                              color: CupertinoColors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              pressedOpacity: 0.72,
-                              onPressed: _handleSignup,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: const Text(
-                                'Get Started',
-                                style: TextStyle(
-                                  color: CupertinoColors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        CupertinoButton(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 10,
-                          ),
-                          pressedOpacity: 0.55,
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              CupertinoPageRoute(
-                                builder: (_) => const SigninPage(),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            'Already have an account? Sign in',
-                            style: TextStyle(
-                              color: const Color(0xFF6F2DA8)
-                                  .withValues(alpha: 0.95),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // ── Back button (more native spacing/feedback) ───────────────────
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 6, top: 6),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: CupertinoButton(
-                    padding: const EdgeInsets.all(10),
-                    minSize: 0,
-                    pressedOpacity: 0.65,
-                    onPressed: () => Navigator.maybePop(context),
-                    child: Icon(
-                      CupertinoIcons.back,
-                      color: CupertinoColors.white.withValues(alpha: 0.92),
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ),
+          _buildBackground(),
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(flex: 40, child: _buildHero(isSmall)),
+                Expanded(flex: 60, child: _buildCard(isSmall)),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0D0118), Color(0xFF1E0638), Color(0xFF4A1080)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.45, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -60, right: -40,
+            child: _GlowBlob(color: const Color(0xFF9B4DCA).withValues(alpha: 0.55), size: 260, blur: 50),
+          ),
+          Positioned(
+            top: 120, left: -70,
+            child: _GlowBlob(color: const Color(0xFFFF5ACD).withValues(alpha: 0.15), size: 220, blur: 40),
+          ),
+          Positioned(
+            bottom: 80, right: -60,
+            child: _GlowBlob(color: const Color(0xFF4D7CFE).withValues(alpha: 0.12), size: 240, blur: 45),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHero(bool isSmall) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, isSmall ? 8 : 16, 24, 0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                width: isSmall ? 100 : 120,
+                height: isSmall ? 100 : 120,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      CupertinoColors.white.withValues(alpha: 0.18),
+                      CupertinoColors.white.withValues(alpha: 0.06),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: CupertinoColors.white.withValues(alpha: 0.22),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6F2DA8).withValues(alpha: 0.5),
+                      blurRadius: 40,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.all(isSmall ? 18 : 22),
+                child: SvgPicture.asset('assets/svg/signup.svg', fit: BoxFit.contain),
+              ),
+            ),
+          ),
+          SizedBox(height: isSmall ? 12 : 16),
+          const Text(
+            'ENDURA',
+            style: TextStyle(
+              color: CupertinoColors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 28, height: 1,
+                  color: CupertinoColors.white.withValues(alpha: 0.3)),
+              const SizedBox(width: 10),
+              Text(
+                'Build endurance, achieve greatness ⚡',
+                style: TextStyle(
+                  color: CupertinoColors.white.withValues(alpha: 0.65),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(width: 28, height: 1,
+                  color: CupertinoColors.white.withValues(alpha: 0.3)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(bool isSmall) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFFFAF5FF).withValues(alpha: 0.97),
+                const Color(0xFFEDE0FF).withValues(alpha: 0.94),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+            border: Border.all(
+              color: CupertinoColors.white.withValues(alpha: 0.7),
+              width: 1,
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(26, isSmall ? 14 : 20, 26, isSmall ? 14 : 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top content
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle
+                    Center(
+                      child: Container(
+                        width: 40, height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6F2DA8).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isSmall ? 12 : 18),
+
+                    // Title
+                    const Center(
+                      child: Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2D0A55),
+                          letterSpacing: -0.5,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Center(
+                      child: Text(
+                        'Start your fitness journey today',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: const Color(0xFF4A1A6B).withValues(alpha: 0.55),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isSmall ? 14 : 20),
+
+                    // Fields
+                    _AuthField(
+                      controller: _username,
+                      placeholder: 'Choose a username',
+                      icon: CupertinoIcons.person_fill,
+                    ),
+                    const SizedBox(height: 10),
+                    _AuthField(
+                      controller: _password,
+                      placeholder: 'Create a password',
+                      icon: CupertinoIcons.lock_fill,
+                      obscureText: hidePassword,
+                      suffix: GestureDetector(
+                        onTap: () => setState(() => hidePassword = !hidePassword),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Icon(
+                            hidePassword ? CupertinoIcons.eye_fill : CupertinoIcons.eye_slash_fill,
+                            color: const Color(0xFF6F2DA8).withValues(alpha: 0.5),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Password tip
+                    Row(
+                      children: [
+                        Icon(CupertinoIcons.shield_lefthalf_fill,
+                            size: 12, color: const Color(0xFF6F2DA8).withValues(alpha: 0.45)),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Use a strong password for better security',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: const Color(0xFF4A1A6B).withValues(alpha: 0.45),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isSmall ? 14 : 20),
+
+                    // Get Started button
+                    SizedBox(
+                      width: double.infinity,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6F2DA8), Color(0xFFAB5CF0)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6F2DA8).withValues(alpha: 0.45),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: CupertinoButton(
+                          color: CupertinoColors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                          pressedOpacity: 0.75,
+                          onPressed: _handleSignup,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: const Text(
+                            'Get Started',
+                            style: TextStyle(
+                              color: CupertinoColors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -621,3 +562,5 @@ class _AuthFieldState extends State<_AuthField> {
     );
   }
 }
+
+

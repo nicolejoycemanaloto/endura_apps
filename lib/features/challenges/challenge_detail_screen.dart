@@ -5,16 +5,50 @@ import 'package:endura/core/utils/formatters.dart';
 import 'package:endura/features/challenges/challenge_repository.dart';
 
 /// Challenge detail screen with progress, description, and join/leave.
-class ChallengeDetailScreen extends StatelessWidget {
+class ChallengeDetailScreen extends StatefulWidget {
   final String challengeId;
 
   const ChallengeDetailScreen({super.key, required this.challengeId});
 
+  @override
+  State<ChallengeDetailScreen> createState() => _ChallengeDetailScreenState();
+}
+
+class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
+  String get challengeId => widget.challengeId;
+
   Future<void> _toggleJoin(CachedChallenge challenge) async {
     if (challenge.joined) {
-      await ChallengeRepository.leave(challengeId);
+      await _confirmLeave(challenge);
     } else {
       await ChallengeRepository.join(challengeId);
+    }
+  }
+
+  Future<void> _confirmLeave(CachedChallenge challenge) async {
+    final confirm = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Leave Challenge?'),
+        content: Text(
+          'Are you sure you want to leave "${challenge.title}"? Your progress will be reset.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ChallengeRepository.leave(challengeId);
     }
   }
 
@@ -198,23 +232,42 @@ class ChallengeDetailScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Join / Leave button
-                  SizedBox(
+                  Container(
                     width: double.infinity,
+                    height: 56,
                     child: CupertinoButton(
-                      color:
-                          c.joined ? AppTheme.danger : AppTheme.primary,
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.radius),
-                      onPressed:
-                          c.completed ? null : () => _toggleJoin(c),
-                      child: Text(
-                        c.completed
-                            ? 'Challenge Complete!'
-                            : c.joined
-                                ? 'Leave Challenge'
-                                : 'Join Challenge',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 16),
+                      color: c.completed
+                          ? CupertinoColors.systemGrey4
+                          : c.joined
+                              ? AppTheme.danger
+                              : AppTheme.primary,
+                      borderRadius: BorderRadius.circular(16),
+                      onPressed: c.completed ? null : () => _toggleJoin(c),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (c.completed)
+                            const Icon(CupertinoIcons.checkmark_circle_fill,
+                                size: 20, color: CupertinoColors.white)
+                          else if (c.joined)
+                            const Icon(CupertinoIcons.minus_circle_fill,
+                                size: 20, color: CupertinoColors.white)
+                          else
+                            const Icon(CupertinoIcons.plus_circle_fill,
+                                size: 20, color: CupertinoColors.white),
+                          const SizedBox(width: 8),
+                          Text(
+                            c.completed
+                                ? 'Challenge Complete!'
+                                : c.joined
+                                    ? 'Leave Challenge'
+                                    : 'Join Challenge',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 17,
+                                color: CupertinoColors.white),
+                          ),
+                        ],
                       ),
                     ),
                   ),

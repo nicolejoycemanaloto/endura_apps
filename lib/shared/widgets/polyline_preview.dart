@@ -15,7 +15,7 @@ class PolylineOnlyPreview extends StatelessWidget {
     super.key,
     required this.routePoints,
     this.backgroundColor = Colors.transparent,
-    this.lineColor = const Color(0xFFFC4C02),
+    this.lineColor = const Color(0xFF6F2DA8),
     this.lineWidth = 3,
     this.showGlow = true,
     this.showEndpoints = true,
@@ -130,13 +130,23 @@ class _RouteLinePainter extends CustomPainter {
     );
 
     if (showEndpoints) {
-      // Start dot (green)
+      // Start dot — light purple (primaryLight shade)
       final startPt = toCanvas(routePoints.first);
-      canvas.drawCircle(startPt, 5, Paint()..color = const Color(0xFF34C759));
+      canvas.drawCircle(startPt, 6, Paint()..color = const Color(0xFF8E44AD));
+      canvas.drawCircle(startPt, 6,
+          Paint()
+            ..color = const Color(0x556F2DA8)
+            ..strokeWidth = 3
+            ..style = PaintingStyle.stroke);
 
-      // End dot (red)
+      // End dot — white with purple border
       final endPt = toCanvas(routePoints.last);
-      canvas.drawCircle(endPt, 5, Paint()..color = const Color(0xFFFF3B30));
+      canvas.drawCircle(endPt, 6, Paint()..color = const Color(0xFF6F2DA8));
+      canvas.drawCircle(endPt, 6,
+          Paint()
+            ..color = const Color(0x556F2DA8)
+            ..strokeWidth = 3
+            ..style = PaintingStyle.stroke);
     }
   }
 

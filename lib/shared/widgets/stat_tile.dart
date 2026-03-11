@@ -1,11 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:endura/core/theme/app_theme.dart';
 
-/// Small stat display widget: icon + label + value.
+/// Small stat display widget: icon + label + value + optional unit.
 class StatTile extends StatelessWidget {
   final IconData? icon;
   final String label;
   final String value;
+  final String? unit;
   final Color? valueColor;
 
   const StatTile({
@@ -13,6 +14,7 @@ class StatTile extends StatelessWidget {
     this.icon,
     required this.label,
     required this.value,
+    this.unit,
     this.valueColor,
   });
 
@@ -25,13 +27,34 @@ class StatTile extends StatelessWidget {
           Icon(icon, size: 18, color: AppTheme.primary),
           const SizedBox(height: 2),
         ],
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: valueColor ?? AppTheme.textColor(context),
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: valueColor ?? AppTheme.textColor(context),
+                height: 1.0,
+              ),
+            ),
+            if (unit != null) ...[
+              const SizedBox(width: 2),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 1),
+                child: Text(
+                  unit!,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 2),
         Text(

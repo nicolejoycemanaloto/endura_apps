@@ -37,6 +37,7 @@ class FeedRepository {
       userName: user.displayName,
       userAvatar: user.avatarLocalPath,
       activityType: activity.type.name,
+      title: activity.title,
       distance: activity.distance,
       duration: activity.duration,
       pace: Formatters.pace(

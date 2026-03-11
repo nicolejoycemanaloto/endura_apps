@@ -1,5 +1,16 @@
 import 'package:endura/shared/models/sync_status.dart';
 
+/// Sentinel wrapper that lets [CachedUser.copyWith] distinguish between
+/// "not provided" (omit the parameter) and "explicitly set to null".
+///
+/// Usage:
+///   user.copyWith(avatarLocalPath: const OptionalValue(null))  // clears it
+///   user.copyWith()                                            // keeps old value
+class OptionalValue<T> {
+  final T? value;
+  const OptionalValue(this.value);
+}
+
 /// Cached user profile model stored in Hive.
 class CachedUser {
   final String id;
@@ -66,8 +77,10 @@ class CachedUser {
 
   CachedUser copyWith({
     String? displayName,
-    String? avatarUrl,
-    String? avatarLocalPath,
+    /// Wrap with [OptionalValue] to explicitly clear: `OptionalValue(null)`
+    OptionalValue<String>? avatarUrl,
+    /// Wrap with [OptionalValue] to explicitly clear: `OptionalValue(null)`
+    OptionalValue<String>? avatarLocalPath,
     String? bio,
     String? location,
     String? preferredSport,
@@ -79,8 +92,8 @@ class CachedUser {
     return CachedUser(
       id: id,
       displayName: displayName ?? this.displayName,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      avatarLocalPath: avatarLocalPath ?? this.avatarLocalPath,
+      avatarUrl: avatarUrl != null ? avatarUrl.value : this.avatarUrl,
+      avatarLocalPath: avatarLocalPath != null ? avatarLocalPath.value : this.avatarLocalPath,
       bio: bio ?? this.bio,
       location: location ?? this.location,
       preferredSport: preferredSport ?? this.preferredSport,

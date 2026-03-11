@@ -18,10 +18,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _bioCtrl;
   late TextEditingController _locationCtrl;
   late TextEditingController _goalsCtrl;
-  String _preferredSport = 'running';
-  String _measurementUnit = 'metric';
-  String _visibility = 'public';
   String? _avatarPath;
+  bool _avatarRemoved = false;
   bool _saving = false;
 
   @override
@@ -32,9 +30,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _bioCtrl = TextEditingController(text: user?.bio ?? '');
     _locationCtrl = TextEditingController(text: user?.location ?? '');
     _goalsCtrl = TextEditingController(text: user?.goals ?? '');
-    _preferredSport = user?.preferredSport ?? 'running';
-    _measurementUnit = user?.measurementUnit ?? 'metric';
-    _visibility = user?.profileVisibility ?? 'public';
     _avatarPath = user?.avatarLocalPath;
   }
 
@@ -52,10 +47,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final path = await showPhotoActionSheet(
       context,
       showRemove: hasPhoto,
-      onRemove: () => setState(() => _avatarPath = null),
+      onRemove: () => setState(() {
+        _avatarPath = null;
+        _avatarRemoved = true;
+      }),
     );
     if (path != null && mounted) {
-      setState(() => _avatarPath = path);
+      setState(() {
+        _avatarPath = path;
+        _avatarRemoved = false;
+      });
     }
   }
 
@@ -70,10 +71,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       bio: _bioCtrl.text.trim(),
       location: _locationCtrl.text.trim(),
       goals: _goalsCtrl.text.trim(),
-      preferredSport: _preferredSport,
-      measurementUnit: _measurementUnit,
-      profileVisibility: _visibility,
-      avatarLocalPath: _avatarPath,
+      avatarLocalPath: _avatarRemoved
+          ? const OptionalValue(null)
+          : (_avatarPath != null ? OptionalValue(_avatarPath) : null),
     );
 
     await UserRepository.saveProfile(user);
@@ -140,85 +140,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 16),
 
               // Fields
-              _FormField(controller: _nameCtrl, label: 'Display Name'),
-              const SizedBox(height: 12),
-              _FormField(controller: _bioCtrl, label: 'Bio', maxLines: 3),
-              const SizedBox(height: 12),
-              _FormField(controller: _locationCtrl, label: 'Location'),
-              const SizedBox(height: 12),
-              _FormField(controller: _goalsCtrl, label: 'Goals', maxLines: 2),
-              const SizedBox(height: 20),
-
-              // Preferred sport
-              _SectionLabel('Preferred Sport'),
-              const SizedBox(height: 6),
-              CupertinoSlidingSegmentedControl<String>(
-                groupValue: _preferredSport,
-                children: const {
-                  'running': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                      child: Text('Running', style: TextStyle(fontSize: 13))),
-                  'cycling': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                      child: Text('Cycling', style: TextStyle(fontSize: 13))),
-                  'walking': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                      child: Text('Walking', style: TextStyle(fontSize: 13))),
-                },
-                onValueChanged: (v) {
-                  if (v != null) setState(() => _preferredSport = v);
-                },
+              _FormField(
+                controller: _nameCtrl,
+                label: 'Display Name',
+                placeholder: 'Enter your name',
               ),
-              const SizedBox(height: 20),
-
-              // Measurement unit
-              _SectionLabel('Measurement Unit'),
-              const SizedBox(height: 6),
-              CupertinoSlidingSegmentedControl<String>(
-                groupValue: _measurementUnit,
-                children: const {
-                  'metric': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Text('Metric', style: TextStyle(fontSize: 13))),
-                  'imperial': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child:
-                          Text('Imperial', style: TextStyle(fontSize: 13))),
-                },
-                onValueChanged: (v) {
-                  if (v != null) setState(() => _measurementUnit = v);
-                },
+              const SizedBox(height: 12),
+              _FormField(
+                controller: _bioCtrl,
+                label: 'Bio',
+                placeholder: 'Tell us a little about yourself…',
+                maxLines: 3,
               ),
-              const SizedBox(height: 20),
-
-              // Visibility
-              _SectionLabel('Profile Visibility'),
-              const SizedBox(height: 6),
-              CupertinoSlidingSegmentedControl<String>(
-                groupValue: _visibility,
-                children: const {
-                  'public': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Text('Public', style: TextStyle(fontSize: 13))),
-                  'followers': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child:
-                          Text('Followers', style: TextStyle(fontSize: 13))),
-                  'private': Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Text('Private', style: TextStyle(fontSize: 13))),
-                },
-                onValueChanged: (v) {
-                  if (v != null) setState(() => _visibility = v);
-                },
+              const SizedBox(height: 12),
+              _FormField(
+                controller: _locationCtrl,
+                label: 'Location',
+                placeholder: 'City, Country',
+              ),
+              const SizedBox(height: 12),
+              _FormField(
+                controller: _goalsCtrl,
+                label: 'Goals',
+                placeholder: 'e.g. Run a 5K, cycle 100 km a week…',
+                maxLines: 2,
               ),
               const SizedBox(height: 40),
             ],
@@ -232,11 +177,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 class _FormField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
+  final String? placeholder;
   final int maxLines;
 
   const _FormField({
     required this.controller,
     required this.label,
+    this.placeholder,
     this.maxLines = 1,
   });
 
@@ -256,6 +203,11 @@ class _FormField extends StatelessWidget {
         CupertinoTextField(
           controller: controller,
           maxLines: maxLines,
+          placeholder: placeholder,
+          placeholderStyle: const TextStyle(
+            fontSize: 15,
+            color: CupertinoColors.placeholderText,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.cardColor(context),
@@ -267,24 +219,6 @@ class _FormField extends StatelessWidget {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
 
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 4),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textSecondary)),
-      ),
-    );
-  }
-}
 
 

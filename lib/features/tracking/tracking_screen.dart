@@ -28,6 +28,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   ActivityType _selectedType = ActivityType.running;
   bool _permissionGranted = false;
   bool _checkingPermission = true;
+  bool _isFollowing = true; // auto-follow user location
 
   // Workout data
   final List<LatLng> _routePoints = [];
@@ -64,11 +65,22 @@ class _TrackingScreenState extends State<TrackingScreen> {
     try {
       final pos = await LocationService.getCurrentPosition();
       if (mounted) {
-        setState(() {
-          _currentLocation = LatLng(pos.latitude, pos.longitude);
-        });
+        final loc = LatLng(pos.latitude, pos.longitude);
+        setState(() => _currentLocation = loc);
+        // Center the map on the user's position immediately
+        try {
+          _mapController.move(loc, 16);
+        } catch (_) {}
       }
     } catch (_) {}
+  }
+
+  void _recenter() {
+    if (_currentLocation == null) return;
+    try {
+      _mapController.move(_currentLocation!, 16);
+    } catch (_) {}
+    setState(() => _isFollowing = true);
   }
 
   void _startWorkout() {
@@ -79,6 +91,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     _elevationGain = 0;
     _lastAltitude = null;
     _startTime = DateTime.now();
+    _isFollowing = true; // Bug 5 fix: always re-enable follow on new workout
 
     _positionSub = LocationService.getPositionStream(distanceFilter: 5)
         .listen(_onPosition);
@@ -94,7 +107,27 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   void _onPosition(Position pos) {
     if (_state != _WorkoutState.tracking) return;
+
+    // Reject very poor accuracy only (>50m) — relaxed for indoor/testing
+    if (pos.accuracy > 50) return;
+
     final newPoint = LatLng(pos.latitude, pos.longitude);
+
+    // Reject if too close to last point (less than 5m) — avoids stationary noise
+    if (_routePoints.isNotEmpty) {
+      final distFromLast = LocationService.distanceBetween(
+        _routePoints.last.latitude, _routePoints.last.longitude,
+        newPoint.latitude, newPoint.longitude,
+      );
+      if (distFromLast < 5) {
+        // Still update current location marker for the dot on map
+        setState(() => _currentLocation = newPoint);
+        if (_isFollowing) {
+          try { _mapController.move(newPoint, _mapController.camera.zoom); } catch (_) {}
+        }
+        return;
+      }
+    }
 
     setState(() {
       if (_routePoints.isNotEmpty) {
@@ -111,7 +144,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       }
       _lastAltitude = pos.altitude;
 
-      // Calorie estimation (rough: ~60 cal/km running)
+      // Calorie estimation
       _calories = (_distance / 1000) * _caloriesPerKm;
 
       _routePoints.add(newPoint);
@@ -119,9 +152,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
     });
 
     // Auto-follow
-    try {
-      _mapController.move(newPoint, _mapController.camera.zoom);
-    } catch (_) {}
+    if (_isFollowing) {
+      try {
+        _mapController.move(newPoint, _mapController.camera.zoom);
+      } catch (_) {}
+    }
   }
 
   double get _caloriesPerKm {
@@ -179,7 +214,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
     final activity = CachedActivity(
       localId: const Uuid().v4(),
-      userId: '', // Will be filled by summary screen
+      userId: '',
       type: _selectedType,
       distance: _distance,
       duration: _elapsedSeconds,
@@ -202,6 +237,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       ),
     );
   }
+
 
   @override
   void dispose() {
@@ -249,61 +285,61 @@ class _TrackingScreenState extends State<TrackingScreen> {
     return CupertinoPageScaffold(
       child: Stack(
         children: [
-          // Map
-          EnduraMap(
-            center: _currentLocation,
-            zoom: 16,
-            mapController: _mapController,
-            interactive: true,
-            polylines: _routePoints.length >= 2
-                ? [PolylineHelper.route(_routePoints, color: const Color(0xFFFC4C02), width: 5)]
-                : [],
-            markers: [
-              if (_routePoints.isNotEmpty)
-                MarkerHelper.start(_routePoints.first),
-              if (_currentLocation != null && _state != _WorkoutState.idle)
-                MarkerHelper.currentLocation(_currentLocation!),
-            ],
+          // Map — wrapped in Listener to detect manual pan
+          Listener(
+            onPointerDown: (_) {
+              if (_isFollowing) setState(() => _isFollowing = false);
+            },
+            child: EnduraMap(
+              center: _currentLocation,
+              zoom: 16,
+              mapController: _mapController,
+              interactive: true,
+              polylines: _routePoints.length >= 2
+                  ? [PolylineHelper.route(_routePoints, color: AppTheme.primary, width: 5)]
+                  : [],
+              markers: [
+                if (_routePoints.isNotEmpty)
+                  MarkerHelper.start(_routePoints.first),
+                if (_currentLocation != null)
+                  MarkerHelper.currentLocation(_currentLocation!),
+              ],
+            ),
           ),
 
-          // Stats overlay
-          if (_state != _WorkoutState.idle)
+          // Recenter button — top-right, solid and always visible
+          if (_currentLocation != null)
             Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
+              top: MediaQuery.of(context).padding.top + 10,
+              right: 14,
+              child: GestureDetector(
+                onTap: _recenter,
                 child: Container(
-                  margin: const EdgeInsets.all(AppTheme.spacingMd),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppTheme.cardColor(context).withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(AppTheme.radius),
+                    color: AppTheme.cardColor(context),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0x1A000000),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                        color: const Color(0x33000000),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _StatColumn(
-                        label: 'Time',
-                        value: Formatters.duration(
-                            Duration(seconds: _elapsedSeconds)),
-                      ),
-                      _StatColumn(
-                        label: 'Distance',
-                        value: Formatters.distanceKm(_distance),
-                      ),
-                      _StatColumn(
-                        label: 'Pace',
-                        value: Formatters.pace(
-                            Duration(seconds: _elapsedSeconds), _distance),
+                      const Icon(CupertinoIcons.location_fill,
+                          size: 16, color: AppTheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Recenter',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textColor(context),
+                        ),
                       ),
                     ],
                   ),
@@ -319,9 +355,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
             child: SafeArea(
               top: false,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 decoration: BoxDecoration(
-                  color: AppTheme.cardColor(context).withValues(alpha: 0.95),
+                  color: AppTheme.cardColor(context).withValues(alpha: 0.97),
                   borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(24)),
                   boxShadow: [
@@ -347,29 +383,79 @@ class _TrackingScreenState extends State<TrackingScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Activity type picker
-        CupertinoSlidingSegmentedControl<ActivityType>(
-          groupValue: _selectedType,
-          children: {
-            for (final type in ActivityType.values)
-              type: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                child: Text(type.label,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-              ),
-          },
-          onValueChanged: (v) {
-            if (v != null) setState(() => _selectedType = v);
-          },
+        // Activity type picker with icons
+        SizedBox(
+          height: 56,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: ActivityType.values.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final type = ActivityType.values[i];
+              final selected = _selectedType == type;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedType = type),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppTheme.primary
+                        : AppTheme.cardColor(context).withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected
+                          ? AppTheme.primary
+                          : CupertinoColors.systemGrey4.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(type.icon, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 6),
+                      Text(
+                        type.label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: selected
+                              ? CupertinoColors.white
+                              : AppTheme.textColor(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
-          child: CupertinoButton.filled(
+          child: CupertinoButton(
+            color: AppTheme.primary,
             borderRadius: BorderRadius.circular(AppTheme.radius),
             onPressed: _startWorkout,
-            child: const Text('Start Workout',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _selectedType.icon,
+                  style: const TextStyle(fontSize: 18),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Start ${_selectedType.label}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                    color: CupertinoColors.white,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -377,87 +463,194 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   Widget _buildActiveControls() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    final dur = Duration(seconds: _elapsedSeconds);
+
+    // Pace / Speed — value and unit split
+    final String paceVal;
+    final String paceUnit;
+    if (_selectedType == ActivityType.cycling) {
+      final kmh = _elapsedSeconds > 0
+          ? ((_distance / 1000) / (_elapsedSeconds / 3600))
+          : 0.0;
+      paceVal = kmh.toStringAsFixed(1);
+      paceUnit = 'km/h';
+    } else {
+      paceVal = Formatters.paceValue(dur, _distance);
+      paceUnit = '/km';
+    }
+    final paceLabel = _selectedType == ActivityType.cycling ? 'Speed' : 'Pace';
+
+    // Distance — value and unit split
+    final distKm = _distance / 1000;
+    final distVal = distKm.toStringAsFixed(2);
+
+    // Time — Strava style (1h 0m or mm:ss)
+    final timeVal = Formatters.durationTrack(dur);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Stop button
-        GestureDetector(
-          onTap: _confirmStop,
-          child: Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppTheme.danger,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.danger.withValues(alpha: 0.3),
-                  blurRadius: 8,
+        // ── Big stats row ───────────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: _BigStat(
+                  label: 'Distance',
+                  value: distVal,
+                  unit: 'km',
                 ),
-              ],
+              ),
             ),
-            child: const Icon(CupertinoIcons.stop_fill,
-                color: CupertinoColors.white, size: 24),
-          ),
-        ),
-        // Pause/Resume button
-        GestureDetector(
-          onTap: _state == _WorkoutState.paused
-              ? _resumeWorkout
-              : _pauseWorkout,
-          child: Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppTheme.primary,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primary.withValues(alpha: 0.3),
-                  blurRadius: 8,
+            Container(width: 1, height: 52, color: CupertinoColors.separator),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: _BigStat(
+                  label: 'Time',
+                  value: timeVal,
                 ),
-              ],
+              ),
             ),
-            child: Icon(
-              _state == _WorkoutState.paused
-                  ? CupertinoIcons.play_fill
-                  : CupertinoIcons.pause_fill,
-              color: CupertinoColors.white,
-              size: 30,
+            Container(width: 1, height: 52, color: CupertinoColors.separator),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: _BigStat(
+                  label: paceLabel,
+                  value: paceVal,
+                  unit: paceUnit,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-        // Spacer for symmetry
-        const SizedBox(width: 60, height: 60),
+        const SizedBox(height: 20),
+        // ── Controls row ────────────────────────────────────────
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Stop button
+            GestureDetector(
+              onTap: _confirmStop,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppTheme.danger,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.danger.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(CupertinoIcons.stop_fill,
+                    color: CupertinoColors.white, size: 26),
+              ),
+            ),
+            // Pause/Resume button
+            GestureDetector(
+              onTap: _state == _WorkoutState.paused
+                  ? _resumeWorkout
+                  : _pauseWorkout,
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  _state == _WorkoutState.paused
+                      ? CupertinoIcons.play_fill
+                      : CupertinoIcons.pause_fill,
+                  color: CupertinoColors.white,
+                  size: 32,
+                ),
+              ),
+            ),
+            // Spacer for symmetry
+            const SizedBox(width: 60, height: 60),
+          ],
+        ),
       ],
     );
   }
 }
 
-class _StatColumn extends StatelessWidget {
+class _BigStat extends StatelessWidget {
   final String label;
   final String value;
+  final String? unit; // rendered smaller, inline after value
 
-  const _StatColumn({required this.label, required this.value});
+  const _BigStat({required this.label, required this.value, this.unit});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value,
-            style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textColor(context))),
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textSecondary,
+            letterSpacing: 0.8,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label,
-            style:
-                const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textColor(context),
+                  letterSpacing: -0.5,
+                  height: 1.0,
+                ),
+              ),
+              if (unit != null) ...[
+                const SizedBox(width: 3),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    unit!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ],
     );
   }
 }
+
+
 
 
 
