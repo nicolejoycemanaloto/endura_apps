@@ -50,7 +50,13 @@ class EnduraMap extends StatelessWidget {
           userAgentPackageName: 'com.endura.app',
           maxZoom: StadiaMapConfig.maxZoom,
         ),
-        if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+        if (polylines.isNotEmpty)
+          PolylineLayer(
+            polylines: polylines,
+            // Disable point simplification so the polyline follows every
+            // recorded GPS point exactly and doesn't cut through buildings.
+            simplificationTolerance: 0,
+          ),
         if (markers.isNotEmpty) MarkerLayer(markers: markers),
       ],
     );

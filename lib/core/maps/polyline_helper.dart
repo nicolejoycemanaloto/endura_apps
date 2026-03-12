@@ -15,6 +15,9 @@ class PolylineHelper {
       strokeWidth: width,
       borderColor: const Color(0x40000000),
       borderStrokeWidth: 1,
+      // Rounded caps & joins so the line looks smooth at every GPS point.
+      strokeCap: StrokeCap.round,
+      strokeJoin: StrokeJoin.round,
     );
   }
 
@@ -24,6 +27,8 @@ class PolylineHelper {
       points: points,
       color: AppTheme.primary.withValues(alpha: 0.7),
       strokeWidth: 3,
+      strokeCap: StrokeCap.round,
+      strokeJoin: StrokeJoin.round,
     );
   }
 
@@ -33,6 +38,8 @@ class PolylineHelper {
       points: points,
       color: AppTheme.warning,
       strokeWidth: 5,
+      strokeCap: StrokeCap.round,
+      strokeJoin: StrokeJoin.round,
     );
   }
 }

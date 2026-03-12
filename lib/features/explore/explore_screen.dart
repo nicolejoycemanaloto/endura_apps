@@ -140,6 +140,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     ? const Color(0x40000000)
                     : const Color(0x00000000),
                 borderStrokeWidth: isSelected ? 1 : 0,
+                strokeCap: StrokeCap.round,
+                strokeJoin: StrokeJoin.round,
               ));
 
               if (isSelected) {
@@ -176,43 +178,52 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         initialCameraFit: initialFit,
                       ),
 
-                      // Recenter button — bottom right of map
-                      Positioned(
-                        right: 14,
-                        bottom: 14,
-                        child: GestureDetector(
-                          onTap: _recenter,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppTheme.cardColor(context),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0x28000000),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                              border: Border.all(
-                                color: AppTheme.primary.withValues(alpha: 0.25),
+                      // Recenter button — top right of map
+                      if (_currentLocation != null)
+                        Positioned(
+                          top: 10,
+                          right: 14,
+                          child: GestureDetector(
+                            onTap: _recenter,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardColor(context),
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0x33000000),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                            ),
-                            child: const Icon(
-                              CupertinoIcons.location_fill,
-                              size: 20,
-                              color: AppTheme.primary,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(CupertinoIcons.location_fill,
+                                      size: 16, color: AppTheme.primary),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Recenter',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textColor(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
 
                       // Deselect / Clear button
                       if (_selected != null)
                         Positioned(
                           top: 10,
-                          right: 10,
+                          left: 14,
                           child: GestureDetector(
                             onTap: () => setState(() => _selected = null),
                             child: Container(

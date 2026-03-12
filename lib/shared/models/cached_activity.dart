@@ -1,7 +1,7 @@
 import 'package:endura/shared/models/sync_status.dart';
 
 /// Activity type enum.
-enum ActivityType { running, cycling, walking, hiking }
+enum ActivityType { walking, running, riding, cycling, hiking }
 
 extension ActivityTypeX on ActivityType {
   String get label {
@@ -14,6 +14,8 @@ extension ActivityTypeX on ActivityType {
         return 'Walking';
       case ActivityType.hiking:
         return 'Hiking';
+      case ActivityType.riding:
+        return 'Riding';
     }
   }
 
@@ -27,6 +29,8 @@ extension ActivityTypeX on ActivityType {
         return '🚶';
       case ActivityType.hiking:
         return '🥾';
+      case ActivityType.riding:
+        return '🏍️';
     }
   }
 
@@ -38,6 +42,8 @@ extension ActivityTypeX on ActivityType {
         return ActivityType.walking;
       case 'hiking':
         return ActivityType.hiking;
+      case 'riding':
+        return ActivityType.riding;
       default:
         return ActivityType.running;
     }
@@ -214,6 +220,5 @@ class CachedActivity {
     );
   }
 }
-
 
 

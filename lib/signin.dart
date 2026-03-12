@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:ui';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -96,7 +98,7 @@ class _SigninPageState extends State<SigninPage> {
     }
 
     if (_username.text.trim() != storedUsername ||
-        _password.text.trim() != storedPassword) {
+        sha256.convert(utf8.encode(_password.text.trim())).toString() != storedPassword) {
       _showError('Invalid username or password.');
       return;
     }
@@ -188,7 +190,10 @@ class _SigninPageState extends State<SigninPage> {
                 child: const Text('Confirm'),
                 onPressed: () {
                   final storedPassword = box.get('password');
-                  if (passwordCtrl.text.trim() == storedPassword) {
+                  final enteredHash = sha256
+                      .convert(utf8.encode(passwordCtrl.text.trim()))
+                      .toString();
+                  if (enteredHash == storedPassword) {
                     Navigator.of(ctx).pop();
                     if (mounted) _confirmReset();
                   } else {
@@ -305,54 +310,45 @@ class _SigninPageState extends State<SigninPage> {
 
   Widget _buildHero(bool isSmall) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, isSmall ? 8 : 16, 24, 0),
+      padding: EdgeInsets.fromLTRB(24, isSmall ? 4 : 10, 24, 0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // SVG in frosted glass square
-          ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                width: isSmall ? 100 : 120,
-                height: isSmall ? 100 : 120,
+          // SVG — large, bare, with glow underneath (no box/border)
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // Glow halo behind icon
+              Container(
+                width: isSmall ? 160 : 190,
+                height: isSmall ? 160 : 190,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
                     colors: [
-                      CupertinoColors.white.withValues(alpha: 0.18),
-                      CupertinoColors.white.withValues(alpha: 0.06),
+                      const Color(0xFFAB5CF0).withValues(alpha: 0.35),
+                      const Color(0xFF6F2DA8).withValues(alpha: 0.0),
                     ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: CupertinoColors.white.withValues(alpha: 0.22),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6F2DA8).withValues(alpha: 0.5),
-                      blurRadius: 40,
-                      offset: const Offset(0, 16),
-                    ),
-                  ],
                 ),
-                padding: EdgeInsets.all(isSmall ? 18 : 22),
-                child: SvgPicture.asset('assets/svg/sigin.svg', fit: BoxFit.contain),
               ),
-            ),
+              SvgPicture.asset(
+                'assets/svg/sigin.svg',
+                width: isSmall ? 130 : 155,
+                height: isSmall ? 130 : 155,
+                fit: BoxFit.contain,
+              ),
+            ],
           ),
-          SizedBox(height: isSmall ? 12 : 16),
+          SizedBox(height: isSmall ? 10 : 14),
           // Brand name with letter spacing
           const Text(
             'ENDURA',
             style: TextStyle(
               color: CupertinoColors.white,
-              fontSize: 26,
+              fontSize: 28,
               fontWeight: FontWeight.w900,
-              letterSpacing: 5,
+              letterSpacing: 6,
             ),
           ),
           const SizedBox(height: 6),

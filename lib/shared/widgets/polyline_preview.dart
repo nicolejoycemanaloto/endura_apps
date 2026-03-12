@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
@@ -152,7 +153,7 @@ class _RouteLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RouteLinePainter oldDelegate) {
-    return oldDelegate.routePoints != routePoints ||
+    return !listEquals(oldDelegate.routePoints, routePoints) ||
         oldDelegate.lineColor != lineColor ||
         oldDelegate.lineWidth != lineWidth ||
         oldDelegate.showGlow != showGlow ||

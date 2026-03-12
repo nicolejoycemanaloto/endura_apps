@@ -113,13 +113,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                             ),
                             const SizedBox(height: 16),
                             _OverlayStat(
-                              label: activity.type == ActivityType.cycling ? 'Speed' : 'Pace',
-                              value: activity.type == ActivityType.cycling
+                              label: (activity.type == ActivityType.cycling || activity.type == ActivityType.riding) ? 'Speed' : 'Pace',
+                              value: (activity.type == ActivityType.cycling || activity.type == ActivityType.riding)
                                   ? activity.avgSpeed.toStringAsFixed(1)
                                   : Formatters.paceValue(
                                       Duration(seconds: activity.duration),
                                       activity.distance),
-                              unit: activity.type == ActivityType.cycling ? 'km/h' : '/km',
+                              unit: (activity.type == ActivityType.cycling || activity.type == ActivityType.riding) ? 'km/h' : '/km',
                               fontSize: 36,
                             ),
                             const SizedBox(height: 16),
@@ -220,7 +220,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                         Expanded(child: _DetailStat(
                             label: 'Time',
                             value: Formatters.durationTrack(Duration(seconds: activity.duration)))),
-                        Expanded(child: activity.type == ActivityType.cycling
+                        Expanded(child: (activity.type == ActivityType.cycling || activity.type == ActivityType.riding)
                             ? _DetailStat(
                                 label: 'Avg Speed',
                                 value: activity.avgSpeed.toStringAsFixed(1),
@@ -236,7 +236,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: activity.type == ActivityType.cycling
+                        Expanded(child: (activity.type == ActivityType.cycling || activity.type == ActivityType.riding)
                             ? _DetailStat(
                                 label: 'Avg Pace',
                                 value: Formatters.paceValue(

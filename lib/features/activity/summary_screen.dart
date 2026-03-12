@@ -212,7 +212,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
   @override
   Widget build(BuildContext context) {
     final dur = Duration(seconds: _act.duration);
-    final isCycling = _act.type == ActivityType.cycling;
+    final isCycling = _act.type == ActivityType.cycling || _act.type == ActivityType.riding;
 
     // Pace / speed split into value + unit
     final String paceVal;
@@ -691,7 +691,7 @@ class _TransparentOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasRoute = routePoints.length >= 2;
     final dur = Duration(seconds: activity.duration);
-    final isCycling = activity.type == ActivityType.cycling;
+    final isCycling = activity.type == ActivityType.cycling || activity.type == ActivityType.riding;
 
     final String paceVal;
     final String paceUnit;
@@ -953,7 +953,7 @@ class _ShareActivityScreenState extends State<_ShareActivityScreen> {
 
   String _shareString() {
     final a = widget.activity;
-    final pace = a.type == ActivityType.cycling
+    final pace = (a.type == ActivityType.cycling || a.type == ActivityType.riding)
         ? '🚴 ${a.avgSpeed.toStringAsFixed(1)} km/h'
         : '🏃 ${a.avgPace.isNotEmpty ? a.avgPace : Formatters.pace(Duration(seconds: a.duration), a.distance)}';
     return '${a.type.icon} ${a.type.label}\n'

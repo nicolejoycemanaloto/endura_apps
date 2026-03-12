@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:lottie/lottie.dart';
 
 import 'constants.dart';
 import 'core/storage/hive_service.dart';
@@ -121,6 +123,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _waveController;
+  Timer? _textTimer;
   final List<String> _loadingTexts = [
     'Initializing',
     'Loading modules',
@@ -138,22 +141,20 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    // Cycle through loading texts
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(milliseconds: 400));
+    // Use a Timer so we can cancel it cleanly in dispose().
+    _textTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
       if (mounted) {
         setState(() {
           _currentTextIndex = (_currentTextIndex + 1) % _loadingTexts.length;
         });
-        return true;
       }
-      return false;
     });
   }
 
   @override
   void dispose() {
     _waveController.dispose();
+    _textTimer?.cancel();
     super.dispose();
   }
 
@@ -165,9 +166,9 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // GIF Animation
-              Image.asset(
-                'assets/splash/splash.gif',
+              // Lottie Animation
+              Lottie.asset(
+                'assets/splash/splash.json',
                 width: 200,
                 height: 200,
                 fit: BoxFit.contain,

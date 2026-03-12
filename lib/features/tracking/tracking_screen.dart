@@ -12,6 +12,7 @@ import 'package:endura/core/utils/location_service.dart';
 import 'package:endura/core/utils/formatters.dart';
 import 'package:endura/shared/models/cached_activity.dart';
 import 'package:endura/features/activity/summary_screen.dart';
+import 'package:endura/features/profile/user_repository.dart';
 
 /// Track tab — live workout recording with map.
 class TrackingScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ enum _WorkoutState { idle, tracking, paused }
 
 class _TrackingScreenState extends State<TrackingScreen> {
   _WorkoutState _state = _WorkoutState.idle;
-  ActivityType _selectedType = ActivityType.running;
+  ActivityType _selectedType = ActivityType.walking;
   bool _permissionGranted = false;
   bool _checkingPermission = true;
   bool _isFollowing = true; // auto-follow user location
@@ -39,6 +40,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   double _elevationGain = 0;
   DateTime? _startTime;
   double? _lastAltitude;
+  DateTime? _lastPositionTime; // used for speed-outlier rejection
 
   StreamSubscription<Position>? _positionSub;
   Timer? _timer;
@@ -90,10 +92,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
     _calories = 0;
     _elevationGain = 0;
     _lastAltitude = null;
+    _lastPositionTime = null;
     _startTime = DateTime.now();
-    _isFollowing = true; // Bug 5 fix: always re-enable follow on new workout
+    _isFollowing = true;
 
-    _positionSub = LocationService.getPositionStream(distanceFilter: 5)
+    _positionSub = LocationService.getPositionStream(distanceFilter: 3)
         .listen(_onPosition);
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -108,26 +111,52 @@ class _TrackingScreenState extends State<TrackingScreen> {
   void _onPosition(Position pos) {
     if (_state != _WorkoutState.tracking) return;
 
-    // Reject very poor accuracy only (>50m) — relaxed for indoor/testing
-    if (pos.accuracy > 50) return;
+    // ── Layer 1: Accuracy gate ─────────────────────────────────────────────
+    // Reject fixes with horizontal accuracy worse than 20 m.
+    // (was 50 m — far too loose; a 49 m accuracy fix is nearly useless)
+    if (pos.accuracy > 20) return;
 
     final newPoint = LatLng(pos.latitude, pos.longitude);
+    final now = DateTime.now();
 
-    // Reject if too close to last point (less than 5m) — avoids stationary noise
     if (_routePoints.isNotEmpty) {
       final distFromLast = LocationService.distanceBetween(
         _routePoints.last.latitude, _routePoints.last.longitude,
         newPoint.latitude, newPoint.longitude,
       );
+
+      // ── Layer 2: Min-distance guard ───────────────────────────────────────
+      // Ignore points closer than 5 m — eliminates stationary GPS drift.
       if (distFromLast < 5) {
-        // Still update current location marker for the dot on map
         setState(() => _currentLocation = newPoint);
         if (_isFollowing) {
           try { _mapController.move(newPoint, _mapController.camera.zoom); } catch (_) {}
         }
         return;
       }
+
+      // ── Layer 3: Speed-outlier rejection ──────────────────────────────────
+      // If the implied speed between the last accepted point and this one
+      // exceeds the physical maximum for the selected activity, it's a GPS
+      // spike — update the map dot but don't add the distance.
+      if (_lastPositionTime != null) {
+        final elapsedSec =
+            now.difference(_lastPositionTime!).inMilliseconds / 1000.0;
+        if (elapsedSec > 0) {
+          final impliedSpeedMs = distFromLast / elapsedSec;
+          if (impliedSpeedMs > _maxSpeedForActivity) {
+            setState(() => _currentLocation = newPoint);
+            if (_isFollowing) {
+              try { _mapController.move(newPoint, _mapController.camera.zoom); } catch (_) {}
+            }
+            return; // spike — skip this point
+          }
+        }
+      }
     }
+
+    // ── Accepted point — update all workout metrics ────────────────────────
+    _lastPositionTime = now;
 
     setState(() {
       if (_routePoints.isNotEmpty) {
@@ -138,24 +167,31 @@ class _TrackingScreenState extends State<TrackingScreen> {
         );
       }
 
-      // Elevation tracking
+      // Elevation — only count uphill gain
       if (_lastAltitude != null && pos.altitude > _lastAltitude!) {
         _elevationGain += pos.altitude - _lastAltitude!;
       }
       _lastAltitude = pos.altitude;
 
-      // Calorie estimation
       _calories = (_distance / 1000) * _caloriesPerKm;
 
       _routePoints.add(newPoint);
       _currentLocation = newPoint;
     });
 
-    // Auto-follow
     if (_isFollowing) {
-      try {
-        _mapController.move(newPoint, _mapController.camera.zoom);
-      } catch (_) {}
+      try { _mapController.move(newPoint, _mapController.camera.zoom); } catch (_) {}
+    }
+  }
+
+  /// Max credible speed (m/s) for the currently selected activity type.
+  double get _maxSpeedForActivity {
+    switch (_selectedType) {
+      case ActivityType.running: return LocationService.maxSpeedRunning;
+      case ActivityType.cycling: return LocationService.maxSpeedCycling;
+      case ActivityType.walking: return LocationService.maxSpeedWalking;
+      case ActivityType.hiking:  return LocationService.maxSpeedHiking;
+      case ActivityType.riding:  return LocationService.maxSpeedRiding;
     }
   }
 
@@ -169,6 +205,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
         return 45;
       case ActivityType.hiking:
         return 55;
+      case ActivityType.riding:
+        return 10;
     }
   }
 
@@ -209,12 +247,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
   void _resumeWorkout() => setState(() => _state = _WorkoutState.tracking);
 
   void _stopWorkout() {
+    // Set idle FIRST so any in-flight _onPosition call returns early
+    // via the `if (_state != _WorkoutState.tracking) return;` guard.
+    setState(() => _state = _WorkoutState.idle);
+
     _positionSub?.cancel();
     _timer?.cancel();
 
+    final userId = UserRepository.getProfile()?.id ?? '';
+
     final activity = CachedActivity(
       localId: const Uuid().v4(),
-      userId: '',
+      userId: userId,
       type: _selectedType,
       distance: _distance,
       duration: _elapsedSeconds,
@@ -229,7 +273,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
       endTime: DateTime.now(),
     );
 
-    setState(() => _state = _WorkoutState.idle);
 
     Navigator.of(context).push(
       CupertinoPageRoute(
@@ -468,7 +511,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     // Pace / Speed — value and unit split
     final String paceVal;
     final String paceUnit;
-    if (_selectedType == ActivityType.cycling) {
+    if (_selectedType == ActivityType.cycling || _selectedType == ActivityType.riding) {
       final kmh = _elapsedSeconds > 0
           ? ((_distance / 1000) / (_elapsedSeconds / 3600))
           : 0.0;
@@ -478,7 +521,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       paceVal = Formatters.paceValue(dur, _distance);
       paceUnit = '/km';
     }
-    final paceLabel = _selectedType == ActivityType.cycling ? 'Speed' : 'Pace';
+    final paceLabel = (_selectedType == ActivityType.cycling || _selectedType == ActivityType.riding) ? 'Speed' : 'Pace';
 
     // Distance — value and unit split
     final distKm = _distance / 1000;
@@ -649,13 +692,5 @@ class _BigStat extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
 
 
