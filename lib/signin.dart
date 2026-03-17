@@ -267,11 +267,29 @@ class _SigninPageState extends State<SigninPage> {
         children: [
           _buildBackground(),
           SafeArea(
-            child: Column(
-              children: [
-                Expanded(flex: 42, child: _buildHero(isSmall)),
-                Expanded(flex: 58, child: _buildCard(isSmall)),
-              ],
+            bottom: false,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: constraints.maxHeight * 0.42,
+                          child: _buildHero(isSmall),
+                        ),
+                        SizedBox(
+                          height: constraints.maxHeight * 0.58,
+                          child: _buildCard(isSmall),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],

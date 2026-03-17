@@ -80,6 +80,7 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmall = screenHeight < 700;
+    final viewPadding = MediaQuery.of(context).viewPadding.top;
 
     return CupertinoPageScaffold(
       resizeToAvoidBottomInset: false,
@@ -87,12 +88,27 @@ class _SignupPageState extends State<SignupPage> {
         fit: StackFit.expand,
         children: [
           _buildBackground(),
-          SafeArea(
-            child: Column(
-              children: [
-                Expanded(flex: 40, child: _buildHero(isSmall)),
-                Expanded(flex: 60, child: _buildCard(isSmall)),
-              ],
+          SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            physics: const ClampingScrollPhysics(),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: (screenHeight - viewPadding) * 0.40,
+                    ),
+                    child: _buildHero(isSmall),
+                  ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: (screenHeight - viewPadding) * 0.60,
+                    ),
+                    child: _buildCard(isSmall),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -135,11 +151,9 @@ class _SignupPageState extends State<SignupPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // SVG — large, bare, with glow underneath (no box/border)
           Stack(
             alignment: Alignment.center,
             children: [
-              // Glow halo behind icon
               Container(
                 width: isSmall ? 160 : 190,
                 height: isSmall ? 160 : 190,
@@ -220,137 +234,132 @@ class _SignupPageState extends State<SignupPage> {
           ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(26, isSmall ? 14 : 20, 26, isSmall ? 14 : 20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top content
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Handle
-                    Center(
-                      child: Container(
-                        width: 40, height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6F2DA8).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6F2DA8).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    SizedBox(height: isSmall ? 12 : 18),
+                  ),
+                  SizedBox(height: isSmall ? 12 : 18),
 
-                    // Title
-                    const Center(
-                      child: Text(
-                        'Create Account',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF2D0A55),
-                          letterSpacing: -0.5,
-                          height: 1.0,
+                  // Title
+                  const Center(
+                    child: Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF2D0A55),
+                        letterSpacing: -0.5,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      'Start your fitness journey today',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: const Color(0xFF4A1A6B).withValues(alpha: 0.55),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: isSmall ? 14 : 20),
+
+                  // Fields
+                  _AuthField(
+                    controller: _username,
+                    placeholder: 'Choose a username',
+                    icon: CupertinoIcons.person_fill,
+                  ),
+                  const SizedBox(height: 10),
+                  _AuthField(
+                    controller: _password,
+                    placeholder: 'Create a password',
+                    icon: CupertinoIcons.lock_fill,
+                    obscureText: hidePassword,
+                    suffix: GestureDetector(
+                      onTap: () => setState(() => hidePassword = !hidePassword),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Icon(
+                          hidePassword ? CupertinoIcons.eye_fill : CupertinoIcons.eye_slash_fill,
+                          color: const Color(0xFF6F2DA8).withValues(alpha: 0.5),
+                          size: 20,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Center(
-                      child: Text(
-                        'Start your fitness journey today',
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Password tip
+                  Row(
+                    children: [
+                      Icon(CupertinoIcons.shield_lefthalf_fill,
+                          size: 12, color: const Color(0xFF6F2DA8).withValues(alpha: 0.45)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Use a strong password for better security',
                         style: TextStyle(
-                          fontSize: 13,
-                          color: const Color(0xFF4A1A6B).withValues(alpha: 0.55),
+                          fontSize: 11,
+                          color: const Color(0xFF4A1A6B).withValues(alpha: 0.45),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                    SizedBox(height: isSmall ? 14 : 20),
+                    ],
+                  ),
+                  SizedBox(height: isSmall ? 14 : 20),
 
-                    // Fields
-                    _AuthField(
-                      controller: _username,
-                      placeholder: 'Choose a username',
-                      icon: CupertinoIcons.person_fill,
-                    ),
-                    const SizedBox(height: 10),
-                    _AuthField(
-                      controller: _password,
-                      placeholder: 'Create a password',
-                      icon: CupertinoIcons.lock_fill,
-                      obscureText: hidePassword,
-                      suffix: GestureDetector(
-                        onTap: () => setState(() => hidePassword = !hidePassword),
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: Icon(
-                            hidePassword ? CupertinoIcons.eye_fill : CupertinoIcons.eye_slash_fill,
-                            color: const Color(0xFF6F2DA8).withValues(alpha: 0.5),
-                            size: 20,
-                          ),
+                  // Get Started button
+                  SizedBox(
+                    width: double.infinity,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6F2DA8), Color(0xFFAB5CF0)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6F2DA8).withValues(alpha: 0.45),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Password tip
-                    Row(
-                      children: [
-                        Icon(CupertinoIcons.shield_lefthalf_fill,
-                            size: 12, color: const Color(0xFF6F2DA8).withValues(alpha: 0.45)),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Use a strong password for better security',
+                      child: CupertinoButton(
+                        color: CupertinoColors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        pressedOpacity: 0.75,
+                        onPressed: _handleSignup,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: const Text(
+                          'Get Started',
                           style: TextStyle(
-                            fontSize: 11,
-                            color: const Color(0xFF4A1A6B).withValues(alpha: 0.45),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: isSmall ? 14 : 20),
-
-                    // Get Started button
-                    SizedBox(
-                      width: double.infinity,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6F2DA8), Color(0xFFAB5CF0)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF6F2DA8).withValues(alpha: 0.45),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: CupertinoButton(
-                          color: CupertinoColors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                          pressedOpacity: 0.75,
-                          onPressed: _handleSignup,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: const Text(
-                            'Get Started',
-                            style: TextStyle(
-                              color: CupertinoColors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              letterSpacing: 0.3,
-                            ),
+                            color: CupertinoColors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -560,5 +569,4 @@ class _AuthFieldState extends State<_AuthField> {
     );
   }
 }
-
 

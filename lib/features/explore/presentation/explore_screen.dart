@@ -118,6 +118,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                           fontSize: 14, color: AppTheme.textSecondary),
                       textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Go to Track tab to start your first workout! 🚴',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               )
@@ -177,6 +187,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                               ],
                               initialCameraFit: initialFit,
                             ),
+                            // Recenter button
                             if (_currentLocation != null)
                               Positioned(
                                 top: 10,
@@ -204,7 +215,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                             size: 16, color: AppTheme.primary),
                                         const SizedBox(width: 6),
                                         Text(
-                                          'Recenter',
+                                          'My Location',
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
@@ -216,6 +227,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                   ),
                                 ),
                               ),
+                            // Clear selection button
                             if (selected != null)
                               Positioned(
                                 top: 10,
@@ -244,7 +256,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                             color: AppTheme.textSecondary),
                                         const SizedBox(width: 4),
                                         Text(
-                                          'Clear',
+                                          'Deselect',
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w500,
@@ -266,13 +278,27 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                              child: Text(
-                                '${acts.length} Route${acts.length == 1 ? '' : 's'}',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textColor(context),
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${acts.length} Route${acts.length == 1 ? '' : 's'}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textColor(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap to view on map',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             Expanded(
@@ -307,8 +333,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                       child: Row(
                                         children: [
                                           Container(
-                                            width: 38,
-                                            height: 38,
+                                            width: 40,
+                                            height: 40,
                                             decoration: BoxDecoration(
                                               color: AppTheme.primarySurface,
                                               borderRadius:
@@ -317,7 +343,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                             child: Center(
                                               child: Text(a.type.icon,
                                                   style: const TextStyle(
-                                                      fontSize: 18)),
+                                                      fontSize: 20)),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -331,11 +357,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                                       ? a.title
                                                       : a.type.label,
                                                   style: TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 15,
                                                     fontWeight: FontWeight.w600,
                                                     color: AppTheme.textColor(context),
                                                   ),
                                                 ),
+                                                const SizedBox(height: 2),
                                                 Text(
                                                   Formatters.date(a.startTime),
                                                   style: const TextStyle(
@@ -353,11 +380,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                               Text(
                                                 Formatters.distanceKm(a.distance),
                                                 style: TextStyle(
-                                                  fontSize: 14,
+                                                  fontSize: 15,
                                                   fontWeight: FontWeight.w700,
                                                   color: AppTheme.textColor(context),
                                                 ),
                                               ),
+                                              const SizedBox(height: 2),
                                               Text(
                                                 Formatters.duration(Duration(
                                                     seconds: a.duration)),
@@ -372,10 +400,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                             padding: EdgeInsets.zero,
                                             minimumSize: Size.zero,
                                             onPressed: () => _openDetail(a),
-                                            child: const Icon(
+                                            child: Icon(
                                               CupertinoIcons.chevron_right,
-                                              size: 16,
-                                              color: CupertinoColors.systemGrey3,
+                                              size: 18,
+                                              color: isSelected
+                                                  ? AppTheme.primary
+                                                  : CupertinoColors.systemGrey3,
                                             ),
                                           ),
                                         ],

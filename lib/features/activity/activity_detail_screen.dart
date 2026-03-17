@@ -247,10 +247,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                                 label: 'Avg Speed',
                                 value: activity.avgSpeed.toStringAsFixed(1),
                                 unit: 'km/h')),
-                        Expanded(child: _DetailStat(
-                            label: 'Calories',
-                            value: activity.calories.round().toString(),
-                            unit: 'cal')),
+                        // Calories hidden per request
                         if (activity.elevationGain > 0)
                           Expanded(child: _DetailStat(
                               label: 'Elevation',

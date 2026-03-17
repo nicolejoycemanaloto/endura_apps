@@ -25,56 +25,25 @@ class WorkoutNotificationService {
   static const _androidChannelDescription =
       'Shows live workout progress with quick actions.';
 
-  static const _actionPause = 'workout_pause';
-  static const _actionResume = 'workout_resume';
-  static const _actionEnd = 'workout_end';
-
-  static const _iosActiveCategory = 'active_workout_active';
-  static const _iosPausedCategory = 'active_workout_paused';
-
   final Ref _ref;
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   bool _permissionsRequested = false;
+  bool? _lastActiveState;
+  WorkoutStatus? _lastWorkoutStatus;
 
   Future<void> initialize() async {
     if (_initialized) return;
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    final darwinSettings = DarwinInitializationSettings(
-      notificationCategories: [
-        DarwinNotificationCategory(
-          _iosActiveCategory,
-          actions: <DarwinNotificationAction>[
-            DarwinNotificationAction.plain(
-              _actionPause,
-              'Pause',
-            ),
-            DarwinNotificationAction.plain(
-              _actionEnd,
-              'End',
-              options: {DarwinNotificationActionOption.destructive},
-            ),
-          ],
-        ),
-        DarwinNotificationCategory(
-          _iosPausedCategory,
-          actions: <DarwinNotificationAction>[
-            DarwinNotificationAction.plain(
-              _actionResume,
-              'Resume',
-            ),
-            DarwinNotificationAction.plain(
-              _actionEnd,
-              'End',
-              options: {DarwinNotificationActionOption.destructive},
-            ),
-          ],
-        ),
-      ],
+    const darwinSettings = DarwinInitializationSettings(
+      notificationCategories: [],
+      requestSoundPermission: true,
+      requestBadgePermission: false,
+      requestAlertPermission: true,
+      defaultPresentSound: false,
     );
 
     final settings = InitializationSettings(
@@ -82,10 +51,7 @@ class WorkoutNotificationService {
       iOS: darwinSettings,
     );
 
-    await _plugin.initialize(
-      settings,
-      onDidReceiveNotificationResponse: _onNotificationResponse,
-    );
+    await _plugin.initialize(settings);
 
     const channel = AndroidNotificationChannel(
       _androidChannelId,
@@ -112,11 +78,26 @@ class WorkoutNotificationService {
       if (previous?.isActive ?? false) {
         await _plugin.cancel(_notificationId);
       }
+      _lastActiveState = false;
+      _lastWorkoutStatus = null;
       return;
     }
 
     await _ensurePermissions();
-    await _showOrUpdate(next);
+
+    final shouldAlert = _shouldAlertForUpdate(next);
+    await _showOrUpdate(next, shouldAlert: shouldAlert);
+
+    _lastActiveState = true;
+    _lastWorkoutStatus = next.status;
+  }
+
+  bool _shouldAlertForUpdate(ActiveWorkoutState state) {
+    final isFirstActiveNotification = _lastActiveState != true;
+    final statusChanged = _lastWorkoutStatus != null && _lastWorkoutStatus != state.status;
+
+    // Alert only when workout starts or status changes (pause/resume).
+    return isFirstActiveNotification || statusChanged;
   }
 
   Future<void> _ensurePermissions() async {
@@ -133,19 +114,21 @@ class WorkoutNotificationService {
     _permissionsRequested = true;
   }
 
-  Future<void> _showOrUpdate(ActiveWorkoutState state) async {
+  Future<void> _showOrUpdate(
+    ActiveWorkoutState state, {
+    required bool shouldAlert,
+  }) async {
     final duration =
         Formatters.durationTrack(Duration(seconds: state.elapsedSeconds));
     final distanceKm = state.distance / 1000;
     final distanceLabel = distanceKm >= 100
         ? distanceKm.toStringAsFixed(1)
         : distanceKm.toStringAsFixed(2);
-    final calories = state.calories.toStringAsFixed(0);
 
     final titlePrefix =
         state.status == WorkoutStatus.paused ? 'Paused' : 'Tracking';
     final title = '$titlePrefix ${state.selectedType.label}';
-    final body = '$duration • $distanceLabel km • $calories kcal';
+    final body = '$duration • $distanceLabel km';
 
     final androidDetails = AndroidNotificationDetails(
       _androidChannelId,
@@ -159,48 +142,25 @@ class WorkoutNotificationService {
       visibility: NotificationVisibility.public,
       category: AndroidNotificationCategory.status,
       ticker: 'Workout running',
-      actions: state.status == WorkoutStatus.paused
-          ? const [
-              AndroidNotificationAction(
-                _actionResume,
-                'Resume',
-                showsUserInterface: false,
-              ),
-              AndroidNotificationAction(
-                _actionEnd,
-                'End',
-                showsUserInterface: false,
-                cancelNotification: true,
-              ),
-            ]
-          : const [
-              AndroidNotificationAction(
-                _actionPause,
-                'Pause',
-                showsUserInterface: false,
-              ),
-              AndroidNotificationAction(
-                _actionEnd,
-                'End',
-                showsUserInterface: false,
-                cancelNotification: true,
-              ),
-            ],
     );
 
     final darwinDetails = DarwinNotificationDetails(
-      categoryIdentifier: state.status == WorkoutStatus.paused
-          ? _iosPausedCategory
-          : _iosActiveCategory,
+      categoryIdentifier: null,
+      threadIdentifier: 'active_workout',
       interruptionLevel: InterruptionLevel.timeSensitive,
-      presentAlert: true,
-      presentSound: true,
+      presentAlert: shouldAlert,
+      presentSound: shouldAlert,
+      presentBadge: false,
+      sound: shouldAlert ? 'default' : null,
     );
 
     final details = NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
     );
+
+    print('🔔 Showing notification: $title - Status: ${state.status}');
+    print('   Category: none (actions removed)');
 
     await _plugin.show(
       _notificationId,
@@ -209,24 +169,5 @@ class WorkoutNotificationService {
       details,
       payload: 'active_workout',
     );
-  }
-
-  Future<void> _onNotificationResponse(NotificationResponse response) async {
-    final actionId = response.actionId;
-    if (actionId == null || actionId.isEmpty) return;
-
-    final controller = _ref.read(activeWorkoutProvider.notifier);
-
-    switch (actionId) {
-      case _actionPause:
-        controller.pause();
-        break;
-      case _actionResume:
-        controller.resume();
-        break;
-      case _actionEnd:
-        await controller.stop();
-        break;
-    }
   }
 }

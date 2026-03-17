@@ -442,10 +442,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                       label: paceLabel,
                       value: paceVal,
                       unit: paceUnit),
-                  _StatCell(
-                      label: 'Calories',
-                      value: _act.calories.round().toString(),
-                      unit: 'cal'),
+                  // Calories hidden per request
                   if (_act.elevationGain > 0)
                     _StatCell(
                         label: 'Elevation',
