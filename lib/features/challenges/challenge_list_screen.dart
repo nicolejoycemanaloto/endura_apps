@@ -38,6 +38,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
 
     return CupertinoPageScaffold(
       child: ValueListenableBuilder(
+
         valueListenable: ChallengeRepository.listenable,
         builder: (context, box, _) {
           final active = ChallengeRepository.getActive();
