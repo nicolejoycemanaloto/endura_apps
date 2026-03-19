@@ -23,6 +23,7 @@ class CachedUser {
   final String goals;
   final String profileVisibility;
   final String measurementUnit; // 'metric' or 'imperial'
+  final double weightKg; // User weight in kg for calorie calculations
   final DateTime updatedAt;
   final SyncStatus syncStatus;
   final String? remoteId;
@@ -38,6 +39,7 @@ class CachedUser {
     this.goals = '',
     this.profileVisibility = 'public',
     this.measurementUnit = 'metric',
+    this.weightKg = 70.0, // Default to 70kg
     DateTime? updatedAt,
     this.syncStatus = SyncStatus.pending,
     this.remoteId,
@@ -54,6 +56,7 @@ class CachedUser {
         'goals': goals,
         'profileVisibility': profileVisibility,
         'measurementUnit': measurementUnit,
+        'weightKg': weightKg,
         'updatedAt': updatedAt.toIso8601String(),
         'syncStatus': syncStatus.value,
         'remoteId': remoteId,
@@ -70,6 +73,7 @@ class CachedUser {
         goals: map['goals'] ?? '',
         profileVisibility: map['profileVisibility'] ?? 'public',
         measurementUnit: map['measurementUnit'] ?? 'metric',
+        weightKg: (map['weightKg'] ?? 70.0).toDouble(),
         updatedAt: DateTime.tryParse(map['updatedAt'] ?? ''),
         syncStatus: SyncStatusX.fromString(map['syncStatus']),
         remoteId: map['remoteId'],
@@ -87,6 +91,7 @@ class CachedUser {
     String? goals,
     String? profileVisibility,
     String? measurementUnit,
+    double? weightKg,
     SyncStatus? syncStatus,
   }) {
     return CachedUser(
@@ -100,6 +105,7 @@ class CachedUser {
       goals: goals ?? this.goals,
       profileVisibility: profileVisibility ?? this.profileVisibility,
       measurementUnit: measurementUnit ?? this.measurementUnit,
+      weightKg: weightKg ?? this.weightKg,
       updatedAt: DateTime.now(),
       syncStatus: syncStatus ?? SyncStatus.pending,
       remoteId: remoteId,

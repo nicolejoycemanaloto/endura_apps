@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:endura/core/storage/hive_boxes.dart';
@@ -16,7 +17,8 @@ class BiometricService {
   static Future<bool> isDeviceSupported() async {
     try {
       return await _auth.isDeviceSupported();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Error checking device support: $e');
       return false;
     }
   }
@@ -31,7 +33,8 @@ class BiometricService {
       if (Platform.isWindows) return true; // Windows Hello — trust isDeviceSupported
       final available = await _auth.getAvailableBiometrics();
       return available.isNotEmpty;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Error checking biometric availability: $e');
       return false;
     }
   }
@@ -40,7 +43,8 @@ class BiometricService {
   static Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
       return await _auth.getAvailableBiometrics();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Error getting biometric types: $e');
       return [];
     }
   }
@@ -60,21 +64,31 @@ class BiometricService {
           biometricOnly: !Platform.isWindows,
         ),
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Biometric authentication error: $e');
       return false;
     }
   }
 
   /// Check if the user has enabled biometric login in settings.
   static bool isEnabled() {
-    final box = Hive.box(HiveBoxes.database);
-    return box.get(_biometricKey, defaultValue: false) == true;
+    try {
+      final box = Hive.box(HiveBoxes.database);
+      return box.get(_biometricKey, defaultValue: false) == true;
+    } catch (e) {
+      debugPrint('❌ Error reading biometric setting: $e');
+      return false;
+    }
   }
 
   /// Enable or disable biometric login.
   static Future<void> setEnabled(bool enabled) async {
-    final box = Hive.box(HiveBoxes.database);
-    await box.put(_biometricKey, enabled);
+    try {
+      final box = Hive.box(HiveBoxes.database);
+      await box.put(_biometricKey, enabled);
+    } catch (e) {
+      debugPrint('❌ Error saving biometric setting: $e');
+    }
   }
 
   /// Returns true if the device primarily uses Face ID (not fingerprint).
@@ -84,7 +98,8 @@ class BiometricService {
     try {
       final types = await _auth.getAvailableBiometrics();
       return types.contains(BiometricType.face);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Error checking Face ID: $e');
       return false;
     }
   }

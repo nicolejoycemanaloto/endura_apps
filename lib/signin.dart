@@ -84,8 +84,16 @@ class _SigninPageState extends State<SigninPage> {
   }
 
   Future<void> _handleSignin() async {
-    if (_username.text.trim().isEmpty || _password.text.trim().isEmpty) {
+    final username = _username.text.trim();
+    final password = _password.text.trim();
+
+    // Validation
+    if (username.isEmpty || password.isEmpty) {
       _showError('Please fill in all fields.');
+      return;
+    }
+    if (username.length > 50 || password.length > 100) {
+      _showError('Invalid input length.');
       return;
     }
 
@@ -97,8 +105,8 @@ class _SigninPageState extends State<SigninPage> {
       return;
     }
 
-    if (_username.text.trim() != storedUsername ||
-        sha256.convert(utf8.encode(_password.text.trim())).toString() != storedPassword) {
+    if (username != storedUsername ||
+        sha256.convert(utf8.encode(password)).toString() != storedPassword) {
       _showError('Invalid username or password.');
       return;
     }
@@ -115,7 +123,7 @@ class _SigninPageState extends State<SigninPage> {
 
     Navigator.of(context).pushAndRemoveUntil(
       CupertinoPageRoute(builder: (_) => const HomeShell()),
-          (route) => false,
+      (route) => false,
     );
   }
 

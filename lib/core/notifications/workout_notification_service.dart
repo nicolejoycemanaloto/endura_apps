@@ -147,9 +147,11 @@ class WorkoutNotificationService {
     final darwinDetails = DarwinNotificationDetails(
       categoryIdentifier: null,
       threadIdentifier: 'active_workout',
-      interruptionLevel: InterruptionLevel.timeSensitive,
-      presentAlert: shouldAlert,
-      presentSound: shouldAlert,
+      interruptionLevel: shouldAlert
+          ? InterruptionLevel.timeSensitive
+          : InterruptionLevel.passive, // Passive for updates, TimeSensitive only on alerts
+      presentAlert: shouldAlert, // Show alert only when starting or status changes
+      presentSound: shouldAlert, // Only play sound on start/status change
       presentBadge: false,
       sound: shouldAlert ? 'default' : null,
     );

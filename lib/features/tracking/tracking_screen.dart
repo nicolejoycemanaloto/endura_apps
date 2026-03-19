@@ -81,13 +81,25 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
   }
 
   Future<void> _checkPermission() async {
-    final granted = await LocationService.ensurePermission();
-    if (!mounted) return;
-    setState(() {
-      _permissionGranted = granted;
-      _checkingPermission = false;
-    });
-    if (granted) _getCurrentLocation();
+    try {
+      final granted = await LocationService.ensurePermission();
+      if (!mounted) return;
+      setState(() {
+        _permissionGranted = granted;
+        _checkingPermission = false;
+      });
+      if (granted) {
+        await _getCurrentLocation();
+      } else {
+        _showError('Location permission is required to track workouts.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _checkingPermission = false);
+        debugPrint('❌ Permission check error: $e');
+        _showError('Error checking location permission: $e');
+      }
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -98,8 +110,31 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
       setState(() => _currentLocation = loc);
       try {
         _mapController.move(loc, 16);
-      } catch (_) {}
-    } catch (_) {}
+      } catch (e) {
+        debugPrint('❌ Map move error: $e');
+      }
+    } catch (e) {
+      if (mounted) {
+        debugPrint('❌ Location error: $e');
+        _showError('Could not get location: $e');
+      }
+    }
+  }
+
+  void _showError(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          )
+        ],
+      ),
+    );
   }
 
   Future<void> _handleStartWorkout() async {

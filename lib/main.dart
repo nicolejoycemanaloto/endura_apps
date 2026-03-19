@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:lottie/lottie.dart';import 'package:lottie/lottie.dart';
-import 'constants.dart';
+import 'package:lottie/lottie.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/storage/hive_service.dart';
 import 'core/storage/hive_boxes.dart';
@@ -28,7 +27,14 @@ void main() async {
   ));
 
   final container = ProviderContainer();
-  await container.read(workoutNotificationServiceProvider).initialize();
+
+  // Initialize notifications with error handling
+  try {
+    await container.read(workoutNotificationServiceProvider).initialize();
+    debugPrint('✅ Notifications initialized successfully');
+  } catch (e) {
+    debugPrint('❌ Notification initialization error: $e');
+  }
 
   runApp(UncontrolledProviderScope(
     container: container,
@@ -55,22 +61,29 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _handleStartup() async {
-    await Future.delayed(const Duration(seconds: 3));
-    final box = Hive.box(HiveBoxes.database);
-    final username = box.get("username");
-    final loggedIn = box.get("loggedIn") == true;
+    try {
+      final box = Hive.box(HiveBoxes.database);
+      final username = box.get("username");
+      final loggedIn = box.get("loggedIn") == true;
 
-    // Ensure a profile exists for this user
-    if (username != null && UserRepository.getProfile() == null) {
-      await UserRepository.createFromAuth(username);
-    }
+      // Ensure a profile exists for this user
+      if (username != null && UserRepository.getProfile() == null) {
+        await UserRepository.createFromAuth(username);
+      }
 
-    if (mounted) {
-      setState(() {
-        _hasUser = username != null;
-        _isLoggedIn = loggedIn;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _hasUser = username != null;
+          _isLoggedIn = loggedIn;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Startup error: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // Show error and allow retry
+      }
     }
   }
 

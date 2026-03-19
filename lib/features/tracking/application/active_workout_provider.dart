@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' hide ActivityType;
 import 'package:latlong2/latlong.dart';
@@ -76,12 +77,13 @@ class ActiveWorkoutController extends Notifier<ActiveWorkoutState> {
 
   @override
   ActiveWorkoutState build() {
-      // Ensure resources are cleaned up when the provider is disposed
-      ref.onDispose(() {
-          _positionSub?.cancel();
-          _timer?.cancel();
-      });
-      return const ActiveWorkoutState();
+    ref.onDispose(() {
+      _positionSub?.cancel();
+      _timer?.cancel();
+      _positionSub = null;
+      _timer = null;
+    });
+    return const ActiveWorkoutState();
   }
 
   void selectType(ActivityType type) {
@@ -110,8 +112,13 @@ class ActiveWorkoutController extends Notifier<ActiveWorkoutState> {
       startTime: startTime,
     );
 
-    _positionSub =
-        LocationService.getPositionStream(distanceFilter: 3).listen(_onPosition);
+    _positionSub = LocationService.getPositionStream(distanceFilter: 3).listen(
+      _onPosition,
+      onError: (error) {
+        debugPrint('❌ GPS Stream Error: $error');
+        state = state.copyWith(status: WorkoutStatus.paused);
+      },
+    );
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.status == WorkoutStatus.tracking) {
@@ -154,7 +161,11 @@ class ActiveWorkoutController extends Notifier<ActiveWorkoutState> {
 
   void _onPosition(Position pos) {
     if (state.status != WorkoutStatus.tracking) return;
-    if (pos.accuracy > 20) return;
+    // More lenient accuracy: accept up to 65m (urban canyon realistic)
+    if (pos.accuracy > 65) {
+      debugPrint('📍 GPS accuracy too poor (${pos.accuracy}m), skipping');
+      return;
+    }
 
     final newPoint = LatLng(pos.latitude, pos.longitude);
     final now = DateTime.now();
@@ -176,11 +187,15 @@ class ActiveWorkoutController extends Notifier<ActiveWorkoutState> {
       }
 
       if (_lastPositionTime != null) {
-        final elapsedSec =
-            now.difference(_lastPositionTime!).inMilliseconds / 1000.0;
-        if (elapsedSec > 0) {
-          final impliedSpeed = distFromLast / elapsedSec;
-          if (impliedSpeed > _maxSpeedForActivity) {
+        final elapsedMs = now.difference(_lastPositionTime!).inMilliseconds;
+        // Avoid division by zero - need at least 200ms between points
+        if (elapsedMs >= 200) {
+          final elapsedSec = elapsedMs / 1000.0;
+          final impliedSpeed = distFromLast / elapsedSec; // m/s
+          final maxSpeed = _maxSpeedForActivity;
+
+          if (impliedSpeed > maxSpeed) {
+            debugPrint('⚡ Speed spike rejected: ${impliedSpeed.toStringAsFixed(1)} m/s > $maxSpeed m/s');
             state = state.copyWith(currentLocation: newPoint);
             return;
           }
@@ -226,18 +241,33 @@ class ActiveWorkoutController extends Notifier<ActiveWorkoutState> {
   }
 
   double get _caloriesPerKm {
-    switch (state.selectedType) {
-      case ActivityType.running:
-        return 62;
-      case ActivityType.cycling:
-        return 30;
-      case ActivityType.walking:
-        return 45;
-      case ActivityType.hiking:
-        return 55;
-      case ActivityType.riding:
-        return 10;
-    }
+    // Get user weight from profile, default to 70kg if not set
+    final userProfile = UserRepository.getProfile();
+    final weightKg = userProfile?.weightKg ?? 70.0;
+
+    // Calorie burn formula: (MET value × weight in kg × time in hours)
+    // Standard MET values per activity type
+    final metValue = switch (state.selectedType) {
+      ActivityType.running => 9.8,      // 9.8 MET for moderate running
+      ActivityType.cycling => 7.5,      // 7.5 MET for moderate cycling
+      ActivityType.walking => 3.5,      // 3.5 MET for walking (3mph/4.8kmh)
+      ActivityType.hiking => 6.0,       // 6.0 MET for hiking
+      ActivityType.riding => 4.0,       // 4.0 MET for horseback riding
+    };
+
+    // Calories per km = (MET × weight) / speed in km/h
+    // Average speeds: running 10kmh, cycling 20kmh, walking 4kmh, hiking 4kmh, riding 12kmh
+    final avgSpeedKmh = switch (state.selectedType) {
+      ActivityType.running => 10.0,
+      ActivityType.cycling => 20.0,
+      ActivityType.walking => 4.0,
+      ActivityType.hiking => 4.0,
+      ActivityType.riding => 12.0,
+    };
+
+    // Calories = MET × weight × hours = MET × weight × (km / speed)
+    // Per km: (MET × weight) / speed
+    return (metValue * weightKg) / avgSpeedKmh;
   }
 
   CachedActivity _buildActivity() {

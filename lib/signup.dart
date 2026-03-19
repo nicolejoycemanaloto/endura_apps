@@ -38,16 +38,49 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   void _handleSignup() {
-    if (_username.text.trim().isEmpty || _password.text.trim().isEmpty) {
-      _showError('Please fill in all fields.');
+    final username = _username.text.trim();
+    final password = _password.text.trim();
+
+    // Validation
+    if (username.isEmpty) {
+      _showError('Username cannot be empty.');
+      return;
+    }
+    if (username.length < 3) {
+      _showError('Username must be at least 3 characters long.');
+      return;
+    }
+    if (username.length > 50) {
+      _showError('Username must be 50 characters or less.');
+      return;
+    }
+    if (!RegExp(r'^[a-zA-Z0-9_.-]+$').hasMatch(username)) {
+      _showError('Username can only contain letters, numbers, dots, dashes, and underscores.');
       return;
     }
 
-    final passwordHash = sha256
-        .convert(utf8.encode(_password.text.trim()))
-        .toString();
+    if (password.isEmpty) {
+      _showError('Password cannot be empty.');
+      return;
+    }
+    if (password.length < 6) {
+      _showError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (password.length > 100) {
+      _showError('Password must be 100 characters or less.');
+      return;
+    }
 
-    box.put('username', _username.text.trim());
+    // Check if user already exists
+    if (box.get('username') != null) {
+      _showError('An account already exists. Please sign in.');
+      return;
+    }
+
+    final passwordHash = sha256.convert(utf8.encode(password)).toString();
+
+    box.put('username', username);
     box.put('password', passwordHash);
     box.put('biometrics', false);
 

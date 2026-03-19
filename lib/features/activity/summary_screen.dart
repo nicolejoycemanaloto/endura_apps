@@ -111,11 +111,13 @@ class _SummaryScreenState extends State<SummaryScreen> {
     setState(() => _saving = true);
     try {
       final user = UserRepository.getProfile();
-      final userId = user?.id ?? '';
+      if (user == null) {
+        throw Exception('User profile not found. Please try logging in again.');
+      }
 
       final toSave = CachedActivity(
         localId: _act.localId,
-        userId: userId,
+        userId: user.id,
         type: _act.type,
         distance: _act.distance,
         duration: _act.duration,
@@ -131,21 +133,81 @@ class _SummaryScreenState extends State<SummaryScreen> {
         photos: _photos,
       );
 
-      await ActivityRepository.save(toSave);
-      if (user != null) {
-        await FeedRepository.createFromActivity(toSave, user);
+      // Save activity first
+      try {
+        await ActivityRepository.save(toSave);
+        debugPrint('✅ Activity saved successfully');
+      } catch (e) {
+        throw Exception('Failed to save activity: $e');
       }
-      await ChallengeRepository.updateProgressFromActivity(toSave);
+
+      // Create feed entry (non-critical - don't fail if this errors)
+      try {
+        await FeedRepository.createFromActivity(toSave, user);
+        debugPrint('✅ Feed entry created');
+      } catch (e) {
+        debugPrint('⚠️ Failed to create feed entry: $e');
+      }
+
+      // Update challenges (non-critical - don't fail if this errors)
+      try {
+        await ChallengeRepository.updateProgressFromActivity(toSave);
+        debugPrint('✅ Challenge progress updated');
+      } catch (e) {
+        debugPrint('⚠️ Failed to update challenges: $e');
+      }
 
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
+        _showSuccess('Activity saved successfully!');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        _showError('Could not save activity: $e');
+        debugPrint('❌ Save error: $e');
+        _showSaveError(e.toString());
       }
     }
+  }
+
+  void _showSuccess(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Success'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showSaveError(String error) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Save Failed'),
+        content: Text(error),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: const Text('Retry'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _save();
+            },
+          )
+        ],
+      ),
+    );
   }
 
   void _discard() {
@@ -191,21 +253,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
     );
   }
 
-  void _showError(String msg) {
-    showCupertinoDialog(
-      context: context,
-      builder: (ctx) => CupertinoAlertDialog(
-        title: const Text('Error'),
-        content: Text(msg),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('OK'),
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Build ────────────────────────────────────────────────────
 

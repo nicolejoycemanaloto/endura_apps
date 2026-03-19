@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -95,7 +96,8 @@ class MediaPickerService {
 
       await File(file.path).copy(savedPath);
       return savedPath;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Error saving media file: $e');
       return null;
     }
   }
@@ -105,7 +107,9 @@ class MediaPickerService {
     try {
       final file = File(path);
       if (await file.exists()) await file.delete();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('❌ Error deleting media file: $e');
+    }
   }
 }
 
