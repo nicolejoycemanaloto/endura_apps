@@ -1,3 +1,5 @@
+// endura_app\lib\features\challenges\challenge_list_screen.dart
+
 import 'package:flutter/cupertino.dart';
 import 'package:endura/core/theme/app_theme.dart';
 import 'package:endura/shared/models/cached_challenge.dart';
@@ -23,7 +25,6 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
 
   Future<void> _init() async {
     await ChallengeRepository.seedDefaults();
-    // Recalculate streaks on screen open
     await ChallengeRepository.recalculateStreaks();
     if (mounted) setState(() => _loading = false);
   }
@@ -31,14 +32,18 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const CupertinoPageScaffold(
-        child: Center(child: CupertinoActivityIndicator(radius: 16)),
+      return CupertinoPageScaffold(
+        child: Center(
+          child: CupertinoActivityIndicator(
+            radius: 16,
+            color: AppTheme.primary,
+          ),
+        ),
       );
     }
 
     return CupertinoPageScaffold(
       child: ValueListenableBuilder(
-
         valueListenable: ChallengeRepository.listenable,
         builder: (context, box, _) {
           final active = ChallengeRepository.getActive();
@@ -49,120 +54,69 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               const CupertinoSliverNavigationBar(
-                largeTitle: Text('Challenges'),
+                largeTitle: Text(
+                  'Challenges',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
+                ),
                 border: null,
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
-                  AppTheme.spacingMd, 0,
-                  AppTheme.spacingMd, 100,
+                  AppTheme.spacingMd,
+                  0,
+                  AppTheme.spacingMd,
+                  100,
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const SizedBox(height: 8),
+
                     // ── Active challenges ──────────────────────────
                     if (active.isNotEmpty) ...[
-                      Text(
-                        'Active Challenges',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textColor(context),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
+                      _SectionHeader(title: 'Active Challenges'),
+                      const SizedBox(height: 8),
                       ...active.map((c) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _ChallengeCard(
-                              challenge: c,
-                              onTap: () => _openDetail(c),
-                            ),
-                          )),
-                      const SizedBox(height: 16),
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ChallengeCard(
+                          challenge: c,
+                          onTap: () => _openDetail(c),
+                        ),
+                      )),
+                      const SizedBox(height: 24),
                     ],
+
                     // ── Completed challenges ───────────────────────
                     if (completed.isNotEmpty) ...[
-                      Text(
-                        'Completed',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textColor(context),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
+                      _SectionHeader(title: 'Completed'),
+                      const SizedBox(height: 8),
                       ...completed.map((c) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _ChallengeCard(
-                              challenge: c,
-                              onTap: () => _openDetail(c),
-                            ),
-                          )),
-                      const SizedBox(height: 16),
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ChallengeCard(
+                          challenge: c,
+                          onTap: () => _openDetail(c),
+                        ),
+                      )),
+                      const SizedBox(height: 24),
                     ],
+
                     // ── Available challenges ───────────────────────
                     if (available.isEmpty && active.isEmpty && completed.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  CupertinoIcons.rosette,
-                                  size: 40,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              const Text('All challenges joined!',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.textSecondary)),
-                              const SizedBox(height: 4),
-                              const Text('Great work! Keep tracking activities.',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      )
+                      _EmptyStateFull()
                     else if (available.isEmpty && (active.isNotEmpty || completed.isNotEmpty))
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(
-                                CupertinoIcons.checkmark_circle_fill,
-                                size: 32,
-                                color: AppTheme.success.withValues(alpha: 0.6),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text('All challenges joined!',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      )
+                      _AllJoinedNotice()
                     else
                       ...available.map((c) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _ChallengeCard(
-                              challenge: c,
-                              onTap: () => _openDetail(c),
-                            ),
-                          )),
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ChallengeCard(
+                          challenge: c,
+                          onTap: () => _openDetail(c),
+                        ),
+                      )),
+
+                    const SizedBox(height: 20),
                   ]),
                 ),
               ),
@@ -183,7 +137,159 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Challenge Card
+// Section Header
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textColor(context),
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primary.withValues(alpha: 0.3),
+                    AppTheme.primary.withValues(alpha: 0.0),
+                  ],
+                  stops: const [0.0, 0.8],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty States
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EmptyStateFull extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      child: Center(
+        child: Column(
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    AppTheme.primary.withValues(alpha: 0.2),
+                    AppTheme.primary.withValues(alpha: 0.0),
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                CupertinoIcons.rosette,
+                size: 48,
+                color: AppTheme.primary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'All challenges joined!',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Great work! Keep tracking activities\nto unlock new challenges soon.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: AppTheme.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AllJoinedNotice extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppTheme.success.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.success.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            CupertinoIcons.checkmark_circle_fill,
+            size: 28,
+            color: AppTheme.success,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'All challenges joined!',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Keep crushing your active challenges.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Challenge Card (Redesigned)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ChallengeCard extends StatefulWidget {
@@ -205,11 +311,11 @@ class _ChallengeCardState extends State<_ChallengeCard>
   void initState() {
     super.initState();
     _animCtrl = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.96).animate(
-      CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut),
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic),
     );
   }
 
@@ -224,6 +330,7 @@ class _ChallengeCardState extends State<_ChallengeCard>
     _animCtrl.reverse();
     widget.onTap();
   }
+
   void _onTapCancel() => _animCtrl.reverse();
 
   @override
@@ -243,233 +350,295 @@ class _ChallengeCardState extends State<_ChallengeCard>
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.cardColor(context),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x0A000000),
+                  color: CupertinoColors.black.withValues(alpha: 0.06),
                   blurRadius: 20,
-                  offset: Offset(0, 8),
-                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -2,
                 ),
                 BoxShadow(
-                  color: Color(0x05000000),
+                  color: CupertinoColors.black.withValues(alpha: 0.02),
                   blurRadius: 6,
-                  offset: Offset(0, 2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(24),
               child: Stack(
                 children: [
-                  // Subtle background tint for joined/completed
-                  if (isJoined || c.completed)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [
-                              (c.completed ? AppTheme.success : AppTheme.primary)
-                                  .withValues(alpha: 0.04),
-                              CupertinoColors.transparent,
-                            ],
-                            stops: const [0.0, 0.7],
-                          ),
+                  // Subtle gradient background
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [
+                            (c.completed
+                                ? AppTheme.success
+                                : isJoined
+                                ? AppTheme.primary
+                                : CupertinoColors.systemGrey)
+                                .withValues(alpha: 0.03),
+                            CupertinoColors.transparent,
+                          ],
+                          stops: const [0.0, 0.8],
                         ),
                       ),
                     ),
+                  ),
 
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top accent bar
-                      Container(
-                        height: 5,
-                        decoration: BoxDecoration(
-                          gradient: c.completed
-                              ? const LinearGradient(
-                                  colors: [Color(0xFF34C759), Color(0xFF30D158)])
+                  // Left accent bar
+                  Positioned(
+                    left: 0,
+                    top: 16,
+                    bottom: 16,
+                    child: Container(
+                      width: 4,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: c.completed
+                              ? [
+                            AppTheme.success,
+                            AppTheme.success.withValues(alpha: 0.5)
+                          ]
                               : isJoined
-                                  ? const LinearGradient(
-                                      colors: [AppTheme.primary, Color(0xFF5AC8FA)])
-                                  : LinearGradient(colors: [
-                                      CupertinoColors.systemGrey4
-                                          .withValues(alpha: 0.5),
-                                      CupertinoColors.systemGrey3
-                                          .withValues(alpha: 0.3),
-                                    ]),
+                              ? [
+                            AppTheme.primary,
+                            AppTheme.primary.withValues(alpha: 0.5)
+                          ]
+                              : [
+                            CupertinoColors.systemGrey,
+                            CupertinoColors.systemGrey2,
+                          ],
                         ),
+                        borderRadius: BorderRadius.circular(2),
                       ),
+                    ),
+                  ),
 
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-                        child: Column(
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Header row ──────────────────────────────
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // ── Header row ──────────────────────────────
-                            Row(
-                              children: [
-                                // Badge icon
-                                if (c.badge != null) ...[
-                                  Container(
-                                    width: 52,
-                                    height: 52,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primarySurface,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppTheme.primary
-                                              .withValues(alpha: 0.15),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Text(c.badge!,
-                                          style:
-                                              const TextStyle(fontSize: 26)),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                ],
-
-                                // Title + type pill
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        c.title,
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.textColor(context),
-                                          letterSpacing: -0.3,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.primary
-                                              .withValues(alpha: 0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          c.type.label,
-                                          style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppTheme.primary),
-                                        ),
-                                      ),
+                            // Badge / Icon
+                            if (c.badge != null) ...[
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppTheme.primary.withValues(alpha: 0.1),
+                                      AppTheme.primary.withValues(alpha: 0.2),
                                     ],
                                   ),
+                                  borderRadius: BorderRadius.circular(18),
                                 ),
-
-                                // Status chip
-                                if (c.completed)
-                                  _StatusChip(
-                                    icon: CupertinoIcons.checkmark_circle_fill,
-                                    label: 'Done',
-                                    color: AppTheme.success,
-                                  )
-                                else if (isJoined)
-                                  _StatusChip(
-                                    label: '$percent%',
-                                    color: AppTheme.primary,
-                                    showDot: true,
-                                  )
-                                else
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: CupertinoColors.systemGrey5
-                                          .withValues(alpha: 0.5),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(
-                                        CupertinoIcons.chevron_right,
-                                        size: 16,
-                                        color:
-                                            CupertinoColors.systemGrey2),
+                                child: Center(
+                                  child: Text(
+                                    c.badge!,
+                                    style: const TextStyle(fontSize: 28),
                                   ),
-                              ],
-                            ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                            ],
 
-                            // ── Progress bar (joined only) ───────────────
-                            if (isJoined) ...[
-                              const SizedBox(height: 18),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                            // Title + type
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Progress',
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.textColor(context))),
-                                  Text('$percent%',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.textColor(context))),
+                                  Text(
+                                    c.title,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.textColor(context),
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primary
+                                          .withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(30),
+                                      border: Border.all(
+                                        color: AppTheme.primary
+                                            .withValues(alpha: 0.2),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      c.type.label,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.primary,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: SizedBox(
-                                  height: 8,
-                                  child: LayoutBuilder(
-                                    builder: (ctx, constraints) => Stack(
-                                      children: [
-                                        Container(
-                                          width: constraints.maxWidth,
-                                          color: CupertinoColors.systemGrey5,
-                                        ),
-                                        AnimatedContainer(
-                                          duration: const Duration(
-                                              milliseconds: 600),
-                                          curve: Curves.easeOutCubic,
-                                          width: constraints.maxWidth *
-                                              c.progressPercent,
-                                          decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                              colors: [
-                                                AppTheme.primary,
-                                                Color(0xFF5AC8FA)
-                                              ],
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                        ),
-                                      ],
+                            ),
+
+                            // Status indicator
+                            if (c.completed)
+                              _StatusChip(
+                                icon: CupertinoIcons.checkmark_circle_fill,
+                                label: 'Done',
+                                color: AppTheme.success,
+                              )
+                            else if (isJoined)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(40),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: AppTheme.primary,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '$percent%',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: CupertinoColors.systemGrey5
+                                      .withValues(alpha: 0.7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  CupertinoIcons.chevron_right,
+                                  size: 16,
+                                  color: CupertinoColors.systemGrey,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                          ],
+                        ),
+
+                        // ── Progress section (joined only) ───────────────
+                        if (isJoined) ...[
+                          const SizedBox(height: 20),
+
+                          // Progress label and percentage
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Progress',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                '$percent%',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.textColor(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Progress bar
+                          Stack(
+                            children: [
+                              Container(
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: CupertinoColors.systemGrey5,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                              ),
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 800),
+                                curve: Curves.easeOutCubic,
+                                height: 10,
+                                width: (MediaQuery.of(context).size.width -
+                                    2 * AppTheme.spacingMd -
+                                    40) *
+                                    c.progressPercent,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [AppTheme.primary, Color(0xFF5AC8FA)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.primary.withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Current / target
+                          Row(
+                            children: [
+                              Icon(
+                                _iconForType(c.type),
+                                size: 14,
+                                color: AppTheme.textSecondary,
+                              ),
+                              const SizedBox(width: 4),
                               Text(
                                 '${c.progress.toStringAsFixed(c.type == ChallengeType.activityCount || c.type == ChallengeType.streak ? 0 : 1)} / ${c.target.toStringAsFixed(0)} ${_unitForType(c.type)}',
                                 style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppTheme.textSecondary,
-                                    fontWeight: FontWeight.w500),
+                                  fontSize: 14,
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
-                          ],
-                        ),
-                      ),
-                    ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -478,6 +647,19 @@ class _ChallengeCardState extends State<_ChallengeCard>
         ),
       ),
     );
+  }
+
+  IconData _iconForType(ChallengeType type) {
+    switch (type) {
+      case ChallengeType.distance:
+        return CupertinoIcons.map;
+      case ChallengeType.time:
+        return CupertinoIcons.clock;
+      case ChallengeType.activityCount:
+        return CupertinoIcons.flame;
+      case ChallengeType.streak:
+        return CupertinoIcons.calendar;
+    }
   }
 }
 
@@ -489,49 +671,39 @@ class _StatusChip extends StatelessWidget {
   final IconData? icon;
   final String label;
   final Color color;
-  final bool showDot;
 
-  const _StatusChip({
-    this.icon,
-    required this.label,
-    required this.color,
-    this.showDot = false,
-  });
+  const _StatusChip({this.icon, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(40),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 5),
-          ] else if (showDot) ...[
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          if (icon != null) Icon(icon, size: 14, color: color),
+          if (icon != null) const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
-            const SizedBox(width: 5),
-          ],
-          Text(label,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: color)),
+          ),
         ],
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit helper
 // ─────────────────────────────────────────────────────────────────────────────
 
 String _unitForType(ChallengeType type) {
@@ -546,4 +718,3 @@ String _unitForType(ChallengeType type) {
       return 'days';
   }
 }
-

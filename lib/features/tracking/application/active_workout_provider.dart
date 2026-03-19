@@ -112,7 +112,7 @@ class ActiveWorkoutController extends Notifier<ActiveWorkoutState> {
       startTime: startTime,
     );
 
-    _positionSub = LocationService.getPositionStream(distanceFilter: 3).listen(
+    _positionSub = LocationService.getPositionStream(distanceFilter: 10).listen(
       _onPosition,
       onError: (error) {
         debugPrint('❌ GPS Stream Error: $error');
