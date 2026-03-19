@@ -89,7 +89,18 @@ class ActiveWorkoutController extends Notifier<ActiveWorkoutState> {
   void selectType(ActivityType type) {
     if (state.status != WorkoutStatus.idle) return;
     if (state.selectedType == type) return;
-    state = state.copyWith(selectedType: type);
+    // Reset all tracking data when selecting a new activity type
+    state = ActiveWorkoutState(
+      status: WorkoutStatus.idle,
+      selectedType: type,
+      routePoints: const <LatLng>[],
+      currentLocation: state.currentLocation,
+      distance: 0,
+      elapsedSeconds: 0,
+      calories: 0,
+      elevationGain: 0,
+      startTime: null,
+    );
   }
 
   Future<void> start() async {
